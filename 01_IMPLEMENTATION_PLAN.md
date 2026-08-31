@@ -236,11 +236,11 @@ Likely 10-minute asks the interviewer might frame as a "user request." My workfl
 
 ## 8. Changes from plan / Phase Evolution
 
-- **Phase 1 (Core Hardening):** Implemented deterministic lossless JSON signature serialization, strict floating-point EPS tie resolution ($10^{-12}$), and state isolation on invalid edits. All 59 core engine/controller tests green.
-- **Phase 2 (Interactive Editing & Centroid Management):** Implemented 3-tier state hierarchy (`original` $\to$ `baseline` $\to$ `current`/`runState`), dynamic centroid addition/removal ($k \in [2, 4]$), direct canvas dragging, and scenario switching. Test count increased to 69 green.
-- **Phase 3 (Mathematical Truth & Timeline Replay):** Visually separated pre-update decision centres from post-update centroids; assignment lines terminate at decision centres and dashed arrows illustrate drift. Implemented immutable historical timeline replay and 4-Stage Flow bar. Test count reached 73 green.
-- **Phase 4 (Cosmic Cafe Visual Redesign & UX Polish):** Redesigned interface into an astronomy-themed Cosmic Cafe dashboard with expanded 560×560 canvas, generic dynamic key event detector, accessible multi-channel data encodings (shapes, letters, colors), and robust Fullscreen mode. Test count reached 77 green.
-- **Phase 5 (Formal QA & Acceptance Audit):** Executed exhaustive contract audit, extreme boundary tests, deep Step vs Run-to-End equivalence verification across all scenarios, and complete documentation cleanup. Total test count reached 82 green. Ready for interview.
+- **Phase 1 (Core Hardening):** Implemented deterministic lossless JSON signature serialization, strict floating-point EPS tie resolution ($10^{-12}$), and state isolation on invalid edits.
+- **Phase 2 (Interactive Editing & Centroid Management):** Implemented 3-tier state hierarchy (`original` $\to$ `baseline` $\to$ `current`/`runState`), full sticker lifecycle (add, remove, edit, drag), dynamic centroid management ($k \in [2, 4]$), and modal dialogs.
+- **Phase 3 (Mathematical Truth & Timeline Replay):** Visually separated pre-update decision centres from post-update centroids; assignment lines terminate at decision centres and dashed arrows illustrate drift. Implemented immutable historical timeline replay and 4-Stage Flow bar.
+- **Phase 4 (Single-Screen Cosmic Observatory Redesign):** Redesigned interface into a single-screen desktop/laptop observatory fitting completely within viewport (1366×768, 1440×900, 1920×1080) with zero page scrolling.
+- **Phase 5 (Formal QA & Acceptance Audit):** Executed exhaustive contract audit across all 17 requirements, regression testing, and verification. Total test count reached 94 green. Fully verified and ready.
 
 ---
 
