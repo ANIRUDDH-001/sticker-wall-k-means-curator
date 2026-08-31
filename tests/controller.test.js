@@ -324,3 +324,169 @@ describe('controller - 4-centre support (test 22)', function() {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Phase 2: Centroid Editing, Add/Remove Centre, and Baseline Isolation Tests
+// ---------------------------------------------------------------------------
+describe('controller - centroid editing and dynamic management (Phase 2)', function() {
+  test('P2-1: editCentre updates centre coordinates and restarts run state from baseline', function() {
+    var c = createController(COSMIC_CAFE);
+    c.step();
+    expect(c.iteration).toBe(1);
+
+    var res = c.editCentre('NEBULA', 3, 3);
+    expect(res.ok).toBe(true);
+    expect(c.iteration).toBe(0);
+    expect(c.status).toBe('READY');
+    expect(c.history).toEqual([]);
+
+    var neb = c.currentCentres.find(function(ct) { return ct.id === 'NEBULA'; });
+    expect(neb.warmth).toBe(3);
+    expect(neb.sparkle).toBe(3);
+
+    // Original demo centre is untouched
+    expect(c.originalCentres[0].id).toBe('NEBULA');
+    expect(c.originalCentres[0].warmth).toBe(2);
+    expect(c.originalCentres[0].sparkle).toBe(2);
+  });
+
+  test('P2-2: editCentre with invalid coordinates or non-existent ID fails and clears stale state', function() {
+    var c = createController(COSMIC_CAFE);
+    c.step();
+
+    var resBadCoord = c.editCentre('NEBULA', 12, 5);
+    expect(resBadCoord.ok).toBe(false);
+    expect(resBadCoord.errors.some(function(e) { return e.code === 'INVALID_WARMTH'; })).toBe(true);
+    expect(c.iteration).toBe(0);
+    expect(c.status).toBe('READY');
+    expect(c.history).toEqual([]);
+
+    var resBadId = c.editCentre('UNKNOWN_CENTRE', 5, 5);
+    expect(resBadId.ok).toBe(false);
+    expect(resBadId.errors.some(function(e) { return e.code === 'CENTRE_NOT_FOUND'; })).toBe(true);
+  });
+
+  test('P2-3: addCentre adds a 4th centre (3 -> 4) and resets run state', function() {
+    var c = createController(COSMIC_CAFE);
+    expect(c.k).toBe(3);
+
+    var res = c.addCentre('PULSAR', 5, 5);
+    expect(res.ok).toBe(true);
+    expect(c.k).toBe(4);
+    expect(c.currentCentres.length).toBe(4);
+    expect(c.currentCentres.some(function(ct) { return ct.id === 'PULSAR'; })).toBe(true);
+    expect(c.iteration).toBe(0);
+    expect(c.status).toBe('READY');
+  });
+
+  test('P2-4: addCentre rejects adding a 5th centre beyond max k=4', function() {
+    var c = createController(COSMIC_CAFE);
+    c.addCentre('CENTRE_4', 5, 5);
+    expect(c.k).toBe(4);
+
+    var res = c.addCentre('CENTRE_5', 6, 6);
+    expect(res.ok).toBe(false);
+    expect(res.errors.some(function(e) { return e.code === 'MAX_CENTRES_EXCEEDED'; })).toBe(true);
+    expect(c.k).toBe(4);
+  });
+
+  test('P2-5: addCentre rejects duplicate centre ID, empty ID, and invalid coordinates', function() {
+    var c = createController(EMPTY_PANEL); // k=2
+    var resDupe = c.addCentre('HOME', 5, 5);
+    expect(resDupe.ok).toBe(false);
+    expect(resDupe.errors.some(function(e) { return e.code === 'DUPLICATE_CENTRE_ID'; })).toBe(true);
+
+    var resEmpty = c.addCentre('   ', 5, 5);
+    expect(resEmpty.ok).toBe(false);
+    expect(resEmpty.errors.some(function(e) { return e.code === 'EMPTY_ID'; })).toBe(true);
+
+    var resBadCoord = c.addCentre('VALID_ID', -1, 5);
+    expect(resBadCoord.ok).toBe(false);
+    expect(resBadCoord.errors.some(function(e) { return e.code === 'INVALID_WARMTH'; })).toBe(true);
+  });
+
+  test('P2-6: addCentre rejects when centre count would exceed sticker count', function() {
+    var tiny = {
+      k: 2,
+      stickers: [
+        { id: 'S1', warmth: 1, sparkle: 1 },
+        { id: 'S2', warmth: 2, sparkle: 2 },
+      ],
+      centres: [
+        { id: 'C1', warmth: 1, sparkle: 1 },
+        { id: 'C2', warmth: 2, sparkle: 2 },
+      ],
+    };
+    var c = createController(tiny);
+    var res = c.addCentre('C3', 5, 5);
+    expect(res.ok).toBe(false);
+    expect(res.errors.some(function(e) { return e.code === 'K_EXCEEDS_STICKERS'; })).toBe(true);
+  });
+
+  test('P2-7: removeCentre removes centre (3 -> 2) and resets run state', function() {
+    var c = createController(COSMIC_CAFE);
+    expect(c.k).toBe(3);
+
+    var res = c.removeCentre('EMBER');
+    expect(res.ok).toBe(true);
+    expect(c.k).toBe(2);
+    expect(c.currentCentres.length).toBe(2);
+    expect(c.currentCentres.some(function(ct) { return ct.id === 'EMBER'; })).toBe(false);
+  });
+
+  test('P2-8: removeCentre rejects reducing k below 2', function() {
+    var c = createController(EMPTY_PANEL); // k=2
+    expect(c.k).toBe(2);
+
+    var res = c.removeCentre('EXILE');
+    expect(res.ok).toBe(false);
+    expect(res.errors.some(function(e) { return e.code === 'MIN_CENTRES_REQUIRED'; })).toBe(true);
+    expect(c.k).toBe(2);
+  });
+
+  test('P2-9: Reset restores exact immutable demo baseline after multiple edits, additions, and removals', function() {
+    var c = createController(COSMIC_CAFE);
+
+    // Edit sticker
+    c.editSticker('SUNRISE', 0, 0);
+    // Edit centre
+    c.editCentre('NEBULA', 9, 9);
+    // Add centre (3 -> 4)
+    c.addCentre('FOURTH', 5, 5);
+    expect(c.k).toBe(4);
+
+    // Run to end
+    c.runToEnd();
+    expect(c.iteration).toBeGreaterThan(0);
+
+    // Reset
+    c.reset();
+
+    // Must match original demo exactly
+    expect(c.k).toBe(3);
+    expect(JSON.stringify(c.currentStickers)).toBe(JSON.stringify(c.originalStickers));
+    expect(JSON.stringify(c.currentCentres)).toBe(JSON.stringify(c.originalCentres));
+    expect(c.iteration).toBe(0);
+    expect(c.status).toBe('READY');
+    expect(c.history).toEqual([]);
+  });
+
+  test('P2-10: Scenario switching produces fully isolated controllers', function() {
+    var cDemo = createController(COSMIC_CAFE);
+    cDemo.runToEnd();
+    expect(cDemo.status).toBe('CONVERGED');
+    expect(cDemo.k).toBe(3);
+
+    var cEmpty = createController(EMPTY_PANEL);
+    expect(cEmpty.status).toBe('READY');
+    expect(cEmpty.iteration).toBe(0);
+    expect(cEmpty.k).toBe(2);
+    cEmpty.runToEnd();
+    expect(cEmpty.status).toBe('CONVERGED');
+    expect(cEmpty.iteration).toBe(2);
+
+    // cDemo unaffected
+    expect(cDemo.iteration).toBe(3);
+  });
+});
+
+

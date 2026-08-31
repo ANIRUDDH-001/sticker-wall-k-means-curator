@@ -56,12 +56,14 @@ createController(collection) **throws** on invalid input rather than returning a
 
 ## AI-influenced decisions
 
-- **Two-layer state model (original* vs current*).** Initial plan draft was ambiguous about whether editing a sticker mutated the frozen originals. Refined during peer review to preserve originalStickers for Reset while currentStickers carries the edit.
-- **Tolerance test split into 3a (0.5e-12, tied) and 3b (2e-12, not tied).** Peer review flagged that a naive < comparison would pass a single "tie within tolerance" test but fail the "just outside tolerance" boundary case. Split into two tests; enforced the correct  estDistance - distance > EPS pattern in the engine.
-- **Inspection distances use pre-update centres.** After Step 1, `controller.currentCentres` holds the *updated* centres. But the inspection panel must show the distances that *drove* the assignment — the centres before the update. Using updated centres would make the iter-1 tie (SUNRISE equidistant from NEBULA and EMBER) invisible to the user. The design uses `originalCentres` for iter 1 and `history[iteration - 2].centres` for later iterations.
-- **Lossless signature encoding (`JSON.stringify`).** Rather than naive delimiter joining (`assignments.join('|')`) which could collide if centre IDs contain delimiter characters, the engine uses deterministic JSON serialization.
-- **Invalid edit state isolation.** An invalid coordinate edit visibly fails and resets any stale active run state (`iteration = 0`, `status = 'READY'`, `history = []`) so stale groups or metrics from a prior run do not persist on screen.
-- **Live modification prep ranked by rehearsal safety, not likelihood.** The safest 10-minute change is highlighted first in `01_IMPLEMENTATION_PLAN.md` §7.
+- **Three-tier state architecture (demo baseline -> working baseline -> active runState).** The immutable demo baseline (`originalStickers`, `originalCentres`) is deeply frozen and never mutated. The working baseline (`baselineStickers`, `baselineCentres`) stores the user's custom edits, added centres, or removed centres. The active run copies (`currentStickers`, `currentCentres`) execute the iterations. Reset always restores from the immutable demo baseline.
+- **Shared direct manipulation drag pipeline.** Canvas dragging converts pointer coordinates to clamped warmth/sparkle values and reuses the exact same `ctrl.editSticker` / `ctrl.editCentre` methods as the numeric inputs, preventing parallel editing logic bugs.
+- **Dynamic $k=2..4$ Centroid Management.** Centroids can be added, removed, or edited with live validation guarding $2 \le k \le 4$ and $k \le \text{sticker count}$. Legend and panel cards adapt dynamically to any active cluster configuration.
+- **Tolerance test split into 3a (0.5e-12, tied) and 3b (2e-12, not tied).** Enforced the strict `bestDistance - distance > EPS` pattern in the engine.
+- **Inspection distances use pre-update centres.** After Step 1, `controller.currentCentres` holds the *updated* centres. But the inspection panel shows the distances that *drove* the assignment — the centres before the update.
+- **Lossless signature encoding (`JSON.stringify`).** Lossless JSON serialization prevents delimiter collisions for arbitrary IDs.
+- **Invalid edit state isolation.** An invalid coordinate edit visibly fails and resets any stale active run state (`iteration = 0`, `status = 'READY'`, `history = []`) without corrupting baseline data.
+- **Live modification prep ranked by rehearsal safety, not likelihood.** Highlighted in `01_IMPLEMENTATION_PLAN.md` §7.
 
 ---
 

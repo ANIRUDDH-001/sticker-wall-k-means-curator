@@ -1,15 +1,8 @@
-/**
- * ui.js - DOM wiring, Canvas rendering, event handlers.
+﻿/**
+ * ui.js - DOM wiring, Canvas rendering, direct map dragging, centroid editing.
  *
- * Zero engine/logic code here. All K-Means computation goes through
- * window.KMeansController and window.KMeansEngine.
- *
- * Inspection-panel design note:
- *   Distances shown are computed against the CENTRES USED FOR ASSIGNMENT
- *   in the last iteration (pre-update input centres), not the post-update
- *   current centres. This makes the tie note in iteration 1 correct:
- *   SUNRISE is 11.250 from both NEBULA(2,2) and EMBER(8,5) — the original
- *   centres that drove the assignment — not the updated centres.
+ * All K-Means computation goes through window.KMeansController and window.KMeansEngine.
+ * Direct dragging completes via the shared ctrl.editSticker / ctrl.editCentre paths.
  */
 
 'use strict';
@@ -23,31 +16,40 @@
     { colour: '#3b82f6', letter: 'N', shape: 'circle'   },
     { colour: '#a855f7', letter: 'C', shape: 'triangle' },
     { colour: '#f97316', letter: 'E', shape: 'square'   },
+    { colour: '#10b981', letter: 'P', shape: 'diamond'  },
   ];
   var X_MIN = 40, X_MAX = 460, Y_MIN = 40, Y_MAX = 460;
-  var HIT_R = 12;
-  var EPS   = 1e-12;
+  var STICKER_R = 8;
+  var HIT_R     = 12;
+  var EPS       = 1e-12;
 
   /* -------------------------------------------------------------------------
    * Module-level state
    * ---------------------------------------------------------------------- */
-  var ctrl       = null;   // current controller instance
+  var ctrl        = null;   // current controller instance
   var stickerHits = [];    // [{id, screenX, screenY, idx}] rebuilt each render
+  var centreHits  = [];    // [{id, screenX, screenY, idx}] rebuilt each render
+
+  // Dragging state
+  var dragTarget = null;   // { type: 'sticker'|'centre', id, idx, startX, startY, currentX, currentY, hasMoved }
 
   /* -------------------------------------------------------------------------
-   * DOM handles (grabbed in init)
+   * DOM handles
    * ---------------------------------------------------------------------- */
   var canvas, ctx,
-      btnLoad, btnStep, btnRun, btnReset, btnApply,
-      selSticker, inpW, inpS,
+      selScenario, btnLoad, btnStep, btnRun, btnReset,
+      selSticker, inpW, inpS, btnApply,
+      selCentre, inpCW, inpCS, btnApplyCentre, btnAddCentre, btnRemoveCentre,
       elIter, elStatus, elSSE,
-      elCards, elInspect, elBanner;
+      elCards, elInspect, elBanner, elLegend;
 
   /* -------------------------------------------------------------------------
    * Coordinate helpers
    * ---------------------------------------------------------------------- */
   function toX(w) { return X_MIN + w * (X_MAX - X_MIN) / 10; }
   function toY(s) { return Y_MAX - s * (Y_MAX - Y_MIN) / 10; }
+  function fromX(x) { return Math.max(0, Math.min(10, (x - X_MIN) / (X_MAX - X_MIN) * 10)); }
+  function fromY(y) { return Math.max(0, Math.min(10, (Y_MAX - y) / (Y_MAX - Y_MIN) * 10)); }
   function fmt(n) { return Number(n).toFixed(3); }
 
   /* -------------------------------------------------------------------------
@@ -80,7 +82,7 @@
     ctx.closePath();
   }
 
-  /* Hollow X mark for initial centres */
+  /* Hollow X mark for initial/baseline centres */
   function drawX(x, y, s) {
     ctx.beginPath();
     ctx.moveTo(x - s, y - s); ctx.lineTo(x + s, y + s);
@@ -89,12 +91,10 @@
   }
 
   function renderGrid() {
-    // -- Clear ----------------------------------------------------------------
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // -- Grid -----------------------------------------------------------------
     ctx.strokeStyle = '#e5e7eb';
     ctx.lineWidth   = 0.5;
     var gi;
@@ -103,7 +103,6 @@
       ctx.beginPath(); ctx.moveTo(X_MIN, toY(gi)); ctx.lineTo(X_MAX, toY(gi)); ctx.stroke();
     }
 
-    // -- Axis tick labels -----------------------------------------------------
     ctx.fillStyle  = '#6b7280';
     ctx.font       = '10px sans-serif';
     ctx.textAlign  = 'center';
@@ -138,7 +137,7 @@
 
     var stickers    = ctrl.currentStickers;
     var centres     = ctrl.currentCentres;
-    var origCentres = ctrl.originalCentres;
+    var origCentres = ctrl.baselineCentres;
     var history     = ctrl.history;
     var snap        = history.length ? history[history.length - 1] : null;
     var assgn       = snap ? snap.assignments : null;
@@ -159,9 +158,11 @@
       });
     }
 
-    // -- Initial centres (hollow X) ------------------------------------------
-    origCentres.forEach(function (c) {
+    // -- Initial / Baseline centres (hollow X) -------------------------------
+    centreHits = [];
+    origCentres.forEach(function (c, i) {
       var x = toX(c.warmth), y = toY(c.sparkle);
+      centreHits.push({ id: c.id, screenX: x, screenY: y, idx: i, warmth: c.warmth, sparkle: c.sparkle });
       ctx.strokeStyle = '#374151';
       ctx.lineWidth   = 2;
       drawX(x, y, 8);
@@ -185,7 +186,7 @@
     stickerHits = [];
     stickers.forEach(function (s, i) {
       var x   = toX(s.warmth), y = toY(s.sparkle);
-      stickerHits.push({ id: s.id, screenX: x, screenY: y, idx: i });
+      stickerHits.push({ id: s.id, screenX: x, screenY: y, idx: i, warmth: s.warmth, sparkle: s.sparkle });
 
       var cidx = assgn
         ? centres.findIndex(function (c) { return c.id === assgn[i]; })
@@ -193,19 +194,22 @@
       ctx.lineWidth = 1.5;
 
       if (cidx >= 0) {
-        var cfg = PANEL_CFG[cidx] || { colour: '#6b7280', letter: '?', shape: 'circle' };
+        var cfg = PANEL_CFG[cidx] || { colour: '#6b7280', letter: cidx < centres.length ? centres[cidx].id.charAt(0) : '?', shape: 'circle' };
+        var ltr = cfg.letter || (centres[cidx] ? centres[cidx].id.charAt(0) : '?');
         ctx.fillStyle   = cfg.colour;
         ctx.strokeStyle = cfg.colour;
-        if      (cfg.shape === 'circle')   drawCircle(x, y, 8);
-        else if (cfg.shape === 'triangle') drawTri(x, y, 9);
-        else if (cfg.shape === 'square')   drawSq(x, y, 7);
+        if      (cfg.shape === 'circle')   drawCircle(x, y, STICKER_R);
+        else if (cfg.shape === 'triangle') drawTri(x, y, STICKER_R + 1);
+        else if (cfg.shape === 'square')   drawSq(x, y, STICKER_R - 1);
+        else if (cfg.shape === 'diamond')  drawDiamond(x, y, STICKER_R);
         ctx.fill();
         ctx.stroke();
-        // Panel letter
+
+        // Panel letter inside marker
         ctx.fillStyle  = '#fff';
         ctx.font       = 'bold 9px sans-serif';
         ctx.textAlign  = 'center';
-        ctx.fillText(cfg.letter, x, y + 3);
+        ctx.fillText(ltr, x, y + 3);
       } else {
         // Unassigned: grey diamond
         ctx.fillStyle   = '#9ca3af';
@@ -222,6 +226,31 @@
       ctx.fillText(s.id, x + 10, y - 4);
     });
 
+    // -- Drag feedback overlay ------------------------------------------------
+    if (dragTarget && dragTarget.hasMoved) {
+      var dw = Math.round(fromX(dragTarget.currentX) * 10) / 10;
+      var ds = Math.round(fromY(dragTarget.currentY) * 10) / 10;
+      var dx = toX(dw), dy = toY(ds);
+
+      ctx.save();
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(dx, dy, 14, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      // Tooltip box
+      var coordTxt = dragTarget.id + ': (' + dw.toFixed(1) + ', ' + ds.toFixed(1) + ')';
+      ctx.font = 'bold 11px sans-serif';
+      var tw = ctx.measureText(coordTxt).width;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(dx - tw / 2 - 4, dy - 30, tw + 8, 18);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.fillText(coordTxt, dx, dy - 17);
+      ctx.restore();
+    }
+
     // -- Status panel --------------------------------------------------------
     elIter.textContent   = ctrl.iteration;
     elStatus.textContent = ctrl.status;
@@ -231,6 +260,9 @@
 
     // -- Panel cards ---------------------------------------------------------
     renderCards(centres, assgn, movs);
+
+    // -- Dynamic Legend ------------------------------------------------------
+    renderLegend(centres);
   }
 
   /* -------------------------------------------------------------------------
@@ -239,7 +271,8 @@
   function renderCards(centres, assgn, movs) {
     elCards.innerHTML = '';
     centres.forEach(function (c, i) {
-      var cfg = PANEL_CFG[i] || { colour: '#6b7280', letter: '?' };
+      var cfg = PANEL_CFG[i] || { colour: '#6b7280', letter: c.id.charAt(0) };
+      var ltr = cfg.letter || c.id.charAt(0);
 
       // Members
       var members = [];
@@ -253,7 +286,7 @@
       var movStr = '&mdash;';
       if (movs && movs[c.id] !== undefined) {
         if (members.length === 0) {
-          // Empty panel: MUST show the retention reason phrase verbatim (PS contract)
+          // Empty panel retention reason phrase verbatim
           movStr = fmt(0) + ' (retained &mdash; no members assigned)';
         } else {
           movStr = fmt(movs[c.id]);
@@ -265,18 +298,17 @@
       if (!assgn) {
         membStr = '&mdash;';
       } else if (members.length === 0) {
-        // Empty panel: MUST show literal text (PS contract)
         membStr = '(none this iteration)';
       } else {
         membStr = members.join(', ');
       }
 
       var div = document.createElement('div');
-      div.className      = 'panel-card';
+      div.className         = 'panel-card';
       div.style.borderColor = cfg.colour;
       div.innerHTML =
         '<div class="card-hd" style="background:' + cfg.colour + '">' +
-          '<span class="card-ltr">' + cfg.letter + '</span> ' +
+          '<span class="card-ltr">' + ltr + '</span> ' +
           '<span>' + c.id + '</span>' +
           '<span class="card-co">(' + fmt(c.warmth) + ',\u202F' + fmt(c.sparkle) + ')</span>' +
         '</div>' +
@@ -289,26 +321,35 @@
   }
 
   /* -------------------------------------------------------------------------
+   * Dynamic Legend
+   * ---------------------------------------------------------------------- */
+  function renderLegend(centres) {
+    if (!elLegend) return;
+    var shapeSymbols = { circle: '&#9679; Circle', triangle: '&#9651; Triangle', square: '&#9632; Square', diamond: '&#9670; Diamond' };
+    var html = '';
+    centres.forEach(function (c, i) {
+      var cfg = PANEL_CFG[i] || { colour: '#6b7280', shape: 'circle', letter: c.id.charAt(0) };
+      var sym = shapeSymbols[cfg.shape] || '&#9679; Symbol';
+      var ltr = cfg.letter || c.id.charAt(0);
+      html += '<span style="color:' + cfg.colour + '">' + sym + ' = ' + c.id + ' (' + ltr + ')</span> ';
+    });
+    html += '<span>&#9674; grey diamond = unassigned</span> ';
+    html += '<span>&#10005; hollow cross = initial centre</span> ';
+    html += '<span>&#9733; filled star = current centre</span>';
+    elLegend.innerHTML = html;
+  }
+
+  /* -------------------------------------------------------------------------
    * Sticker inspection panel
-   *
-   * IMPORTANT: distances are computed against the CENTRES USED FOR ASSIGNMENT
-   * (the input centres of the last iteration), NOT the post-update current
-   * centres. This is the only interpretation consistent with smoke-test steps
-   * E and G simultaneously:
-   *   - Step G (iter 1): assignment used original centres (2,2),(2,8),(8,5)
-   *     → SUNRISE d²=11.250 to NEBULA and EMBER → tie visible.
-   *   - Step E (iter 3, converged): assignment used history[1].centres;
-   *     at convergence those equal current centres → same result either way.
    * ---------------------------------------------------------------------- */
   function inspect(idx) {
     var s    = ctrl.currentStickers[idx];
     var snap = ctrl.history.length ? ctrl.history[ctrl.history.length - 1] : null;
     var assgn = snap ? snap.assignments : null;
 
-    // Centres used for last assignment (pre-update input centres)
     var aCentres;
     if (ctrl.iteration <= 1) {
-      aCentres = ctrl.originalCentres;
+      aCentres = ctrl.baselineCentres;
     } else {
       aCentres = ctrl.history[ctrl.iteration - 2].centres;
     }
@@ -321,7 +362,6 @@
     var assignedId = assgn ? assgn[idx] : null;
     var minD2 = dists.reduce(function (m, d) { return Math.min(m, d.d2); }, Infinity);
 
-    // Tie detection: any centre other than the assigned one within EPS of min
     var ties = dists.filter(function (d) {
       return d.id !== assignedId && Math.abs(d.d2 - minD2) <= EPS;
     });
@@ -347,28 +387,78 @@
   }
 
   /* -------------------------------------------------------------------------
-   * Button handlers
+   * Synchronization helpers
    * ---------------------------------------------------------------------- */
-  function onLoad() {
-    ctrl = window.KMeansController.createController(window.COSMIC_CAFE);
-
-    // Populate sticker dropdown
+  function syncStickerDropdown() {
     selSticker.innerHTML = '';
-    ctrl.currentStickers.forEach(function (s) {
+    ctrl.baselineStickers.forEach(function (s) {
       var o = document.createElement('option');
       o.value = s.id;
       o.textContent = s.id;
       selSticker.appendChild(o);
     });
-    // Pre-fill inputs for first sticker
-    var first = ctrl.currentStickers[0];
-    inpW.value = first.warmth;
-    inpS.value = first.sparkle;
+    syncStickerInputs();
+  }
+
+  function syncStickerInputs() {
+    if (!ctrl) return;
+    var s = ctrl.baselineStickers.find(function (st) { return st.id === selSticker.value; });
+    if (s) {
+      inpW.value = s.warmth;
+      inpS.value = s.sparkle;
+      inpW.disabled = false;
+      inpS.disabled = false;
+      btnApply.disabled = false;
+    } else {
+      inpW.disabled = true;
+      inpS.disabled = true;
+      btnApply.disabled = true;
+    }
+  }
+
+  function syncCentreDropdown() {
+    selCentre.innerHTML = '';
+    ctrl.baselineCentres.forEach(function (c) {
+      var o = document.createElement('option');
+      o.value = c.id;
+      o.textContent = c.id;
+      selCentre.appendChild(o);
+    });
+    syncCentreInputs();
+  }
+
+  function syncCentreInputs() {
+    if (!ctrl) return;
+    var c = ctrl.baselineCentres.find(function (ct) { return ct.id === selCentre.value; });
+    if (c) {
+      inpCW.value = c.warmth;
+      inpCS.value = c.sparkle;
+      inpCW.disabled = false;
+      inpCS.disabled = false;
+      btnApplyCentre.disabled = false;
+    } else {
+      inpCW.disabled = true;
+      inpCS.disabled = true;
+      btnApplyCentre.disabled = true;
+    }
+    btnAddCentre.disabled = ctrl.k >= 4;
+    btnRemoveCentre.disabled = ctrl.k <= 2;
+  }
+
+  /* -------------------------------------------------------------------------
+   * Button handlers
+   * ---------------------------------------------------------------------- */
+  function onLoad() {
+    var sc = selScenario.value;
+    var collection = (sc === 'empty') ? window.EMPTY_PANEL : window.COSMIC_CAFE;
+    ctrl = window.KMeansController.createController(collection);
+
+    syncStickerDropdown();
+    syncCentreDropdown();
 
     btnStep.disabled  = false;
     btnRun.disabled   = false;
     btnReset.disabled = false;
-    btnApply.disabled = false;
 
     clearBanner();
     elInspect.innerHTML = '<em>Click a sticker on the canvas to inspect distances.</em>';
@@ -392,6 +482,8 @@
   function onReset() {
     if (!ctrl) return;
     ctrl.reset();
+    syncStickerDropdown();
+    syncCentreDropdown();
     btnStep.disabled = false;
     btnRun.disabled  = false;
     clearBanner();
@@ -399,7 +491,7 @@
     render();
   }
 
-  function onApply() {
+  function onApplySticker() {
     if (!ctrl) return;
     var id = selSticker.value;
     var w  = parseFloat(inpW.value);
@@ -420,6 +512,72 @@
     }
   }
 
+  function onApplyCentre() {
+    if (!ctrl) return;
+    var id = selCentre.value;
+    var w  = parseFloat(inpCW.value);
+    var s  = parseFloat(inpCS.value);
+    var res = ctrl.editCentre(id, w, s);
+    if (!res.ok) {
+      showBanner(res.errors.map(function (e) { return e.message; }).join(' | '));
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
+      render();
+    } else {
+      clearBanner();
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
+      render();
+    }
+  }
+
+  function onAddCentre() {
+    if (!ctrl) return;
+    if (ctrl.k >= 4) {
+      showBanner('Cannot add centre: maximum k is 4.');
+      return;
+    }
+    var defaultId = 'PANEL_' + (ctrl.k + 1);
+    var id = window.prompt ? window.prompt('Enter new centroid ID (2-30 chars):', defaultId) : defaultId;
+    if (!id) return;
+    id = id.trim();
+    var res = ctrl.addCentre(id, 5, 5);
+    if (!res.ok) {
+      showBanner(res.errors.map(function (e) { return e.message; }).join(' | '));
+      render();
+    } else {
+      clearBanner();
+      syncCentreDropdown();
+      selCentre.value = id;
+      syncCentreInputs();
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
+      render();
+    }
+  }
+
+  function onRemoveCentre() {
+    if (!ctrl) return;
+    if (ctrl.k <= 2) {
+      showBanner('Cannot remove centre: minimum k is 2.');
+      return;
+    }
+    var id = selCentre.value;
+    if (!id) return;
+    var res = ctrl.removeCentre(id);
+    if (!res.ok) {
+      showBanner(res.errors.map(function (e) { return e.message; }).join(' | '));
+      render();
+    } else {
+      clearBanner();
+      syncCentreDropdown();
+      syncCentreInputs();
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
+      render();
+    }
+  }
+
   function syncBtns() {
     var done = ctrl.status === 'CONVERGED' || ctrl.status === 'NOT_CONVERGED';
     btnStep.disabled = done;
@@ -427,23 +585,136 @@
   }
 
   /* -------------------------------------------------------------------------
-   * Canvas click → hit-test stickers (linear scan, 12 px radius)
+   * Canvas Drag & Drop Direct Manipulation
    * ---------------------------------------------------------------------- */
-  function onCanvasClick(e) {
-    if (!ctrl) return;
+  function getCanvasCoords(e) {
     var rect = canvas.getBoundingClientRect();
     var scaleX = canvas.width  / rect.width;
     var scaleY = canvas.height / rect.height;
-    var mx = (e.clientX - rect.left) * scaleX;
-    var my = (e.clientY - rect.top)  * scaleY;
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top)  * scaleY,
+    };
+  }
 
-    var best = null, bestD = HIT_R + 1;
-    stickerHits.forEach(function (h) {
-      var dx = mx - h.screenX, dy = my - h.screenY;
-      var d  = Math.sqrt(dx * dx + dy * dy);
-      if (d < bestD) { bestD = d; best = h; }
+  function onMouseDown(e) {
+    if (!ctrl) return;
+    var pos = getCanvasCoords(e);
+
+    // Hit test centres first
+    var hitCentre = null;
+    centreHits.forEach(function (ch) {
+      var dx = pos.x - ch.screenX, dy = pos.y - ch.screenY;
+      if (Math.sqrt(dx * dx + dy * dy) <= 14) hitCentre = ch;
     });
-    if (best) inspect(best.idx);
+
+    if (hitCentre) {
+      dragTarget = {
+        type: 'centre',
+        id: hitCentre.id,
+        idx: hitCentre.idx,
+        startX: pos.x,
+        startY: pos.y,
+        currentX: pos.x,
+        currentY: pos.y,
+        hasMoved: false,
+      };
+      selCentre.value = hitCentre.id;
+      syncCentreInputs();
+      canvas.style.cursor = 'grabbing';
+      return;
+    }
+
+    // Hit test stickers
+    var hitSticker = null;
+    stickerHits.forEach(function (sh) {
+      var dx = pos.x - sh.screenX, dy = pos.y - sh.screenY;
+      if (Math.sqrt(dx * dx + dy * dy) <= HIT_R) hitSticker = sh;
+    });
+
+    if (hitSticker) {
+      dragTarget = {
+        type: 'sticker',
+        id: hitSticker.id,
+        idx: hitSticker.idx,
+        startX: pos.x,
+        startY: pos.y,
+        currentX: pos.x,
+        currentY: pos.y,
+        hasMoved: false,
+      };
+      selSticker.value = hitSticker.id;
+      syncStickerInputs();
+      canvas.style.cursor = 'grabbing';
+    }
+  }
+
+  function onMouseMove(e) {
+    if (!ctrl) return;
+    var pos = getCanvasCoords(e);
+
+    if (dragTarget) {
+      var moveDist = Math.sqrt(Math.pow(pos.x - dragTarget.startX, 2) + Math.pow(pos.y - dragTarget.startY, 2));
+      if (moveDist > 3) dragTarget.hasMoved = true;
+      dragTarget.currentX = pos.x;
+      dragTarget.currentY = pos.y;
+
+      var dw = Math.round(fromX(pos.x) * 10) / 10;
+      var ds = Math.round(fromY(pos.y) * 10) / 10;
+
+      if (dragTarget.type === 'sticker') {
+        inpW.value = dw;
+        inpS.value = ds;
+      } else {
+        inpCW.value = dw;
+        inpCS.value = ds;
+      }
+
+      render();
+      return;
+    }
+
+    // Hover cursor feedback
+    var hover = false;
+    centreHits.forEach(function (ch) {
+      var dx = pos.x - ch.screenX, dy = pos.y - ch.screenY;
+      if (Math.sqrt(dx * dx + dy * dy) <= 14) hover = true;
+    });
+    stickerHits.forEach(function (sh) {
+      var dx = pos.x - sh.screenX, dy = pos.y - sh.screenY;
+      if (Math.sqrt(dx * dx + dy * dy) <= HIT_R) hover = true;
+    });
+    canvas.style.cursor = hover ? 'grab' : 'crosshair';
+  }
+
+  function onMouseUp(e) {
+    if (!dragTarget) return;
+
+    if (!dragTarget.hasMoved) {
+      // It was a click without drag
+      if (dragTarget.type === 'sticker') {
+        inspect(dragTarget.idx);
+      }
+    } else {
+      var pos = getCanvasCoords(e.changedTouches ? e.changedTouches[0] : e);
+      var w = Math.round(fromX(pos.x) * 10) / 10;
+      var s = Math.round(fromY(pos.y) * 10) / 10;
+
+      if (dragTarget.type === 'sticker') {
+        ctrl.editSticker(dragTarget.id, w, s);
+      } else if (dragTarget.type === 'centre') {
+        ctrl.editCentre(dragTarget.id, w, s);
+      }
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
+      clearBanner();
+    }
+
+    dragTarget = null;
+    canvas.style.cursor = 'crosshair';
+    render();
   }
 
   /* -------------------------------------------------------------------------
@@ -462,40 +733,60 @@
    * DOMContentLoaded — wire everything up
    * ---------------------------------------------------------------------- */
   document.addEventListener('DOMContentLoaded', function () {
-    canvas    = document.getElementById('mainCanvas');
-    ctx       = canvas.getContext('2d');
+    canvas      = document.getElementById('mainCanvas');
+    ctx         = canvas.getContext('2d');
 
-    btnLoad   = document.getElementById('btnLoad');
-    btnStep   = document.getElementById('btnStep');
-    btnRun    = document.getElementById('btnRun');
-    btnReset  = document.getElementById('btnReset');
-    btnApply  = document.getElementById('btnApply');
+    selScenario = document.getElementById('selScenario');
+    btnLoad     = document.getElementById('btnLoad');
+    btnStep     = document.getElementById('btnStep');
+    btnRun      = document.getElementById('btnRun');
+    btnReset    = document.getElementById('btnReset');
+
+    selSticker  = document.getElementById('selSticker');
+    inpW        = document.getElementById('inpW');
+    inpS        = document.getElementById('inpS');
+    btnApply    = document.getElementById('btnApply');
+
+    selCentre       = document.getElementById('selCentre');
+    inpCW           = document.getElementById('inpCW');
+    inpCS           = document.getElementById('inpCS');
+    btnApplyCentre  = document.getElementById('btnApplyCentre');
+    btnAddCentre    = document.getElementById('btnAddCentre');
+    btnRemoveCentre = document.getElementById('btnRemoveCentre');
+
+    elIter      = document.getElementById('elIter');
+    elStatus    = document.getElementById('elStatus');
+    elSSE       = document.getElementById('elSSE');
+    elCards     = document.getElementById('panelCards');
+    elInspect   = document.getElementById('inspection');
+    elBanner    = document.getElementById('banner');
+    elLegend    = document.getElementById('legend');
 
     renderGrid();
-
-    selSticker = document.getElementById('selSticker');
-    inpW       = document.getElementById('inpW');
-    inpS       = document.getElementById('inpS');
-
-    elIter    = document.getElementById('elIter');
-    elStatus  = document.getElementById('elStatus');
-    elSSE     = document.getElementById('elSSE');
-    elCards   = document.getElementById('panelCards');
-    elInspect = document.getElementById('inspection');
-    elBanner  = document.getElementById('banner');
 
     btnLoad.addEventListener('click', onLoad);
     btnStep.addEventListener('click', onStep);
     btnRun.addEventListener('click',  onRun);
     btnReset.addEventListener('click', onReset);
-    btnApply.addEventListener('click', onApply);
-    canvas.addEventListener('click',  onCanvasClick);
+    btnApply.addEventListener('click', onApplySticker);
 
-    // Auto-fill editor inputs when a different sticker is selected
-    selSticker.addEventListener('change', function () {
-      if (!ctrl) return;
-      var s = ctrl.currentStickers.find(function (st) { return st.id === selSticker.value; });
-      if (s) { inpW.value = s.warmth; inpS.value = s.sparkle; }
+    btnApplyCentre.addEventListener('click', onApplyCentre);
+    btnAddCentre.addEventListener('click', onAddCentre);
+    btnRemoveCentre.addEventListener('click', onRemoveCentre);
+
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup',   onMouseUp);
+
+    // Touch support
+    canvas.addEventListener('touchstart', onMouseDown, { passive: true });
+    canvas.addEventListener('touchmove',  onMouseMove, { passive: true });
+    window.addEventListener('touchend',   onMouseUp,   { passive: true });
+
+    selSticker.addEventListener('change', syncStickerInputs);
+    selCentre.addEventListener('change',  syncCentreInputs);
+    selScenario.addEventListener('change', function () {
+      btnLoad.textContent = 'Load ' + (selScenario.value === 'empty' ? 'Empty Panel' : 'Demo');
     });
   });
 

@@ -14,26 +14,54 @@
 </header>
 
 <div class="controls-bar">
-  <div class="btn-group">
-    <button id="btnLoad">Load Demo</button>
-    <button id="btnStep"   disabled>Step</button>
-    <button id="btnRun"    disabled>Run to End</button>
-    <button id="btnReset"  disabled>Reset</button>
+  <div class="control-row">
+    <div class="btn-group">
+      <label class="ctrl-label"><strong>Scenario:</strong>
+        <select id="selScenario">
+          <option value="demo">Cosmic Cafe Demo (k=3)</option>
+          <option value="empty">Empty Panel Test (k=2)</option>
+        </select>
+      </label>
+      <button id="btnLoad">Load</button>
+      <button id="btnStep"   disabled>Step</button>
+      <button id="btnRun"    disabled>Run to End</button>
+      <button id="btnReset"  disabled>Reset</button>
+    </div>
   </div>
-  <div class="editor-group">
-    <label>Sticker:
-      <select id="selSticker"><option value="">— load demo first —</option></select>
-    </label>
-    <label>Warmth: <input type="number" id="inpW" min="0" max="10" step="0.1"></label>
-    <label>Sparkle: <input type="number" id="inpS" min="0" max="10" step="0.1"></label>
-    <button id="btnApply" disabled>Apply</button>
+
+  <div class="control-row editors-row">
+    <!-- Sticker Editor -->
+    <div class="editor-group" id="stickerEditorGroup">
+      <label class="ctrl-label"><strong>Sticker:</strong>
+        <select id="selSticker"><option value="">— load demo first —</option></select>
+      </label>
+      <label>W: <input type="number" id="inpW" min="0" max="10" step="0.1" disabled></label>
+      <label>S: <input type="number" id="inpS" min="0" max="10" step="0.1" disabled></label>
+      <button id="btnApply" disabled>Update Sticker</button>
+    </div>
+
+    <div class="v-divider"></div>
+
+    <!-- Centroid Management -->
+    <div class="editor-group" id="centreEditorGroup">
+      <label class="ctrl-label"><strong>Centroid:</strong>
+        <select id="selCentre"><option value="">— load demo first —</option></select>
+      </label>
+      <label>W: <input type="number" id="inpCW" min="0" max="10" step="0.1" disabled></label>
+      <label>S: <input type="number" id="inpCS" min="0" max="10" step="0.1" disabled></label>
+      <button id="btnApplyCentre" disabled>Update Centre</button>
+      <button id="btnAddCentre" disabled title="Add a new centre (max k=4)">+ Add</button>
+      <button id="btnRemoveCentre" disabled title="Remove selected centre (min k=2)">- Remove</button>
+    </div>
   </div>
+
   <div id="banner" class="hidden"></div>
 </div>
 
 <div class="main-area">
   <div class="canvas-wrap">
     <canvas id="mainCanvas" width="500" height="500"></canvas>
+    <div class="canvas-hint">Tip: You can directly drag any sticker (●/▲/■/◆) or centroid (★) on the map.</div>
   </div>
 
   <div class="right-panel">
@@ -52,7 +80,7 @@
   <em>Click a sticker on the canvas to inspect distances.</em>
 </div>
 
-<div class="legend">
+<div class="legend" id="legend">
   <span style="color:#3b82f6">&#9679; Circle = NEBULA (N)</span>
   <span style="color:#a855f7">&#9651; Triangle = COMET (C)</span>
   <span style="color:#f97316">&#9632; Square = EMBER (E)</span>
