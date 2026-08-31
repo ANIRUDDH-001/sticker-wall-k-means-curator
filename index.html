@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sticker Wall K-Means Curator</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>Sticker Wall K-Means Curator <span class="byline">· CC63</span></h1>
+</header>
+
+<div class="controls-bar">
+  <div class="btn-group">
+    <button id="btnLoad">Load Demo</button>
+    <button id="btnStep"   disabled>Step</button>
+    <button id="btnRun"    disabled>Run to End</button>
+    <button id="btnReset"  disabled>Reset</button>
+  </div>
+  <div class="editor-group">
+    <label>Sticker:
+      <select id="selSticker"><option value="">— load demo first —</option></select>
+    </label>
+    <label>Warmth: <input type="number" id="inpW" min="0" max="10" step="0.1"></label>
+    <label>Sparkle: <input type="number" id="inpS" min="0" max="10" step="0.1"></label>
+    <button id="btnApply" disabled>Apply</button>
+  </div>
+  <div id="banner" class="hidden"></div>
+</div>
+
+<div class="main-area">
+  <div class="canvas-wrap">
+    <canvas id="mainCanvas" width="500" height="500"></canvas>
+  </div>
+
+  <div class="right-panel">
+    <div class="status-box">
+      <div>Iteration: <strong id="elIter">0</strong> / 20</div>
+      <div>Status: <span id="elStatus" class="status-pill sp-ready">READY</span></div>
+      <div>Total SSE: <span id="elSSE">&mdash;</span></div>
+    </div>
+    <div class="panel-cards" id="panelCards">
+      <em style="color:#6b7280;font-size:13px">Load Demo to begin.</em>
+    </div>
+  </div>
+</div>
+
+<div id="inspection">
+  <em>Click a sticker on the canvas to inspect distances.</em>
+</div>
+
+<div class="legend">
+  <span style="color:#3b82f6">&#9679; &#9651; Circle = NEBULA (N)</span>
+  <span style="color:#a855f7">&#9651; Triangle = COMET (C)</span>
+  <span style="color:#f97316">&#9632; Square = EMBER (E)</span>
+  <span>&#9674; grey diamond = unassigned</span>
+  <span>&#10005; hollow cross = initial centre</span>
+  <span>&#9733; filled star = current centre</span>
+</div>
+
+<!-- Script loading order per spec: engine → controller → data → ui -->
+<script src="js/engine.js"></script>
+<script src="js/controller.js"></script>
+<script src="data/demo.js"></script>
+<script src="data/emptyPanel.js"></script>
+<script src="js/ui.js"></script>
+
+</body>
+</html>
