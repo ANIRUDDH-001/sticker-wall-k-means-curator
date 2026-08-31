@@ -11,7 +11,7 @@
 
 'use strict';
 
-const engine = (typeof require !== 'undefined')
+var engineModule = (typeof require !== 'undefined')
   ? require('./engine.js')
   : (typeof window !== 'undefined' ? window.KMeansEngine : null);
 
@@ -35,7 +35,7 @@ function deepFreeze(obj) {
 // createController
 // ---------------------------------------------------------------------------
 function createController(collection) {
-  var validation = engine.validate(collection);
+  var validation = engineModule.validate(collection);
   if (!validation.ok) {
     throw new Error(
       'Invalid collection: ' +
@@ -65,11 +65,11 @@ function createController(collection) {
     iteration += 1;
 
     // Call through module reference so Jest spies intercept correctly.
-    var result = engine.runIteration({ stickers: currentStickers, centres: currentCentres });
+    var result = engineModule.runIteration({ stickers: currentStickers, centres: currentCentres });
 
     currentCentres = result.newCentres;
 
-    var converged = engine.isConverged(result.newSignature, prevSignature, iteration);
+    var converged = engineModule.isConverged(result.newSignature, prevSignature, iteration);
 
     var newStatus;
     if (converged) {
