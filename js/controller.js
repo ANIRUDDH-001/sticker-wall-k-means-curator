@@ -142,6 +142,12 @@ function createController(collection) {
     }
 
     if (errors.length > 0) {
+      // Clear stale run state so invalid edit leaves no stale groups, metrics, or history
+      currentCentres = deepCopy(originalCentres);
+      iteration     = 0;
+      status        = 'READY';
+      history       = [];
+      prevSignature = '';
       return { ok: false, errors: errors };
     }
 

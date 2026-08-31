@@ -1,4 +1,4 @@
-﻿/**
+/**
  * engine.js — Pure K-Means engine for the Sticker Wall K-Means Curator.
  *
  * RULES (do not violate):
@@ -192,7 +192,7 @@ function totalSquaredError(stickers, assignments, centres) {
 // signature
 // ---------------------------------------------------------------------------
 function signature(assignments) {
-  return assignments.join('|');
+  return JSON.stringify(assignments);
 }
 
 // ---------------------------------------------------------------------------

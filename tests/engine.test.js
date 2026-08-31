@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const engine = require('../js/engine.js');
 const {
@@ -176,12 +176,24 @@ describe('totalSquaredError', function() {
 // ---------------------------------------------------------------------------
 // Test 8: signature
 // ---------------------------------------------------------------------------
+// Test 8: signature
+// ---------------------------------------------------------------------------
 describe('signature', function() {
   test('8 - identical assignments produce identical signature strings', function() {
     const a1 = ['A', 'B', 'A'];
     const a2 = ['A', 'B', 'A'];
     expect(signature(a1)).toBe(signature(a2));
-    expect(signature(a1)).toBe('A|B|A');
+    expect(signature(a1)).toBe(JSON.stringify(['A', 'B', 'A']));
+  });
+
+  test('8b - signature is collision-safe for IDs containing delimiters or special characters', function() {
+    const a1 = ['A|B', 'C'];
+    const a2 = ['A', 'B|C'];
+    expect(signature(a1)).not.toBe(signature(a2));
+
+    const a3 = ['A,B', 'C'];
+    const a4 = ['A', 'B,C'];
+    expect(signature(a3)).not.toBe(signature(a4));
   });
 });
 
@@ -190,20 +202,20 @@ describe('signature', function() {
 // ---------------------------------------------------------------------------
 describe('isConverged', function() {
   test('9a - isConverged(sig, sig, 0) === false (first-iteration guard)', function() {
-    expect(isConverged('A|B', 'A|B', 0)).toBe(false);
+    expect(isConverged(JSON.stringify(['A', 'B']), JSON.stringify(['A', 'B']), 0)).toBe(false);
   });
 
   test('9b - isConverged(sig, sig, 1) === true', function() {
-    expect(isConverged('A|B', 'A|B', 1)).toBe(true);
+    expect(isConverged(JSON.stringify(['A', 'B']), JSON.stringify(['A', 'B']), 1)).toBe(true);
   });
 
   test('9c - isConverged("A|B", "A|C", 1) === false', function() {
-    expect(isConverged('A|B', 'A|C', 1)).toBe(false);
+    expect(isConverged(JSON.stringify(['A', 'B']), JSON.stringify(['A', 'C']), 1)).toBe(false);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Tests 11-14: validate
+// Tests 11-14 + comprehensive validation audit: validate
 // ---------------------------------------------------------------------------
 describe('validate', function() {
   test('11 - k=1 returns ok:false with INVALID_K error', function() {
@@ -231,6 +243,66 @@ describe('validate', function() {
     expect(result.errors.some(e => e.code === 'INVALID_K')).toBe(true);
   });
 
+  test('11c - sticker count < 2 (1 sticker) returns ok:false with STICKER_COUNT error', function() {
+    const result = validate({
+      k: 2,
+      stickers: [{ id: 'A', warmth: 1, sparkle: 1 }],
+      centres: [
+        { id: 'C1', warmth: 1, sparkle: 1 },
+        { id: 'C2', warmth: 9, sparkle: 9 },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(e => e.code === 'STICKER_COUNT')).toBe(true);
+  });
+
+  test('11d - sticker count > 30 (31 stickers) returns ok:false with STICKER_COUNT error', function() {
+    const stickers = Array.from({ length: 31 }, function(_, i) {
+      return { id: 'S' + i, warmth: 1, sparkle: 1 };
+    });
+    const centres = [
+      { id: 'C1', warmth: 1, sparkle: 1 },
+      { id: 'C2', warmth: 9, sparkle: 9 },
+    ];
+    const result = validate({ k: 2, stickers, centres });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(e => e.code === 'STICKER_COUNT')).toBe(true);
+  });
+
+  test('11e - k > sticker count (k=3, 2 stickers) returns ok:false with K_EXCEEDS_STICKERS error', function() {
+    const result = validate({
+      k: 3,
+      stickers: [
+        { id: 'A', warmth: 1, sparkle: 1 },
+        { id: 'B', warmth: 2, sparkle: 2 },
+      ],
+      centres: [
+        { id: 'C1', warmth: 1, sparkle: 1 },
+        { id: 'C2', warmth: 5, sparkle: 5 },
+        { id: 'C3', warmth: 9, sparkle: 9 },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(e => e.code === 'K_EXCEEDS_STICKERS')).toBe(true);
+  });
+
+  test('11f - centre count does not match k (k=3, 2 centres) returns ok:false with CENTRE_COUNT_MISMATCH error', function() {
+    const result = validate({
+      k: 3,
+      stickers: [
+        { id: 'A', warmth: 1, sparkle: 1 },
+        { id: 'B', warmth: 2, sparkle: 2 },
+        { id: 'C', warmth: 3, sparkle: 3 },
+      ],
+      centres: [
+        { id: 'C1', warmth: 1, sparkle: 1 },
+        { id: 'C2', warmth: 9, sparkle: 9 },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(e => e.code === 'CENTRE_COUNT_MISMATCH')).toBe(true);
+  });
+
   test('12 - warmth=10.5 returns ok:false with offending sticker ID in error', function() {
     const result = validate({
       k: 2,
@@ -249,7 +321,25 @@ describe('validate', function() {
     expect(err.ref).toBe('BAD');
   });
 
-  test('13 - duplicate sticker ID returns ok:false', function() {
+  test('12b - centre coordinate out of range (sparkle=-0.1) returns ok:false with offending centre ID', function() {
+    const result = validate({
+      k: 2,
+      stickers: [
+        { id: 'S1', warmth: 1, sparkle: 1 },
+        { id: 'S2', warmth: 2, sparkle: 2 },
+      ],
+      centres: [
+        { id: 'C1', warmth: 1, sparkle: -0.1 },
+        { id: 'C2', warmth: 9, sparkle: 9 },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    const err = result.errors.find(e => e.code === 'COORD_OUT_OF_RANGE');
+    expect(err).toBeDefined();
+    expect(err.ref).toBe('C1');
+  });
+
+  test('13 - duplicate sticker ID returns ok:false with DUPLICATE_STICKER_ID error', function() {
     const result = validate({
       k: 2,
       stickers: [
@@ -265,7 +355,55 @@ describe('validate', function() {
     expect(result.errors.some(e => e.code === 'DUPLICATE_STICKER_ID')).toBe(true);
   });
 
-  test('14a - NaN coordinate returns ok:false', function() {
+  test('13b - duplicate centre ID returns ok:false with DUPLICATE_CENTRE_ID error', function() {
+    const result = validate({
+      k: 2,
+      stickers: [
+        { id: 'S1', warmth: 1, sparkle: 1 },
+        { id: 'S2', warmth: 2, sparkle: 2 },
+      ],
+      centres: [
+        { id: 'DUPE_C', warmth: 1, sparkle: 1 },
+        { id: 'DUPE_C', warmth: 9, sparkle: 9 },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(e => e.code === 'DUPLICATE_CENTRE_ID')).toBe(true);
+  });
+
+  test('13c - empty sticker ID (empty string or whitespace) returns ok:false with EMPTY_ID error', function() {
+    const result = validate({
+      k: 2,
+      stickers: [
+        { id: '', warmth: 1, sparkle: 1 },
+        { id: '  ', warmth: 2, sparkle: 2 },
+      ],
+      centres: [
+        { id: 'C1', warmth: 1, sparkle: 1 },
+        { id: 'C2', warmth: 9, sparkle: 9 },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(e => e.code === 'EMPTY_ID')).toBe(true);
+  });
+
+  test('13d - empty centre ID returns ok:false with EMPTY_ID error', function() {
+    const result = validate({
+      k: 2,
+      stickers: [
+        { id: 'S1', warmth: 1, sparkle: 1 },
+        { id: 'S2', warmth: 2, sparkle: 2 },
+      ],
+      centres: [
+        { id: '', warmth: 1, sparkle: 1 },
+        { id: 'C2', warmth: 9, sparkle: 9 },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(e => e.code === 'EMPTY_ID')).toBe(true);
+  });
+
+  test('14a - NaN coordinate returns ok:false with NON_FINITE_COORD error', function() {
     const result = validate({
       k: 2,
       stickers: [
@@ -281,7 +419,7 @@ describe('validate', function() {
     expect(result.errors.some(e => e.code === 'NON_FINITE_COORD')).toBe(true);
   });
 
-  test('14b - Infinity coordinate returns ok:false', function() {
+  test('14b - Infinity coordinate returns ok:false with NON_FINITE_COORD error', function() {
     const result = validate({
       k: 2,
       stickers: [
@@ -291,6 +429,22 @@ describe('validate', function() {
       centres: [
         { id: 'C1', warmth: 1, sparkle: 1 },
         { id: 'C2', warmth: 9, sparkle: 9 },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(e => e.code === 'NON_FINITE_COORD')).toBe(true);
+  });
+
+  test('14c - non-number centre coordinate (string or null) returns ok:false with NON_FINITE_COORD error', function() {
+    const result = validate({
+      k: 2,
+      stickers: [
+        { id: 'S1', warmth: 1, sparkle: 1 },
+        { id: 'S2', warmth: 2, sparkle: 2 },
+      ],
+      centres: [
+        { id: 'C1', warmth: 'bad', sparkle: 1 },
+        { id: 'C2', warmth: 9, sparkle: null },
       ],
     });
     expect(result.ok).toBe(false);
@@ -351,7 +505,38 @@ describe('Integration A - PS built-in example (mint/coral)', function() {
     expect(coral.warmth).toBe(6.25);
     expect(coral.sparkle).toBe(6.25);
 
-    // SSE = 0 + 3.125 + 0.78125 + 0.78125 + 15.125 ... let's check plan value
     expect(r2.sse).toBeCloseTo(21.5, 5);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Integration Test B: 4-centre generic engine support (k=4)
+// ---------------------------------------------------------------------------
+describe('Integration B - 4-centre generic engine support (k=4)', function() {
+  test('runs k=4 collection with 4 corners correctly', function() {
+    const stickers = [
+      { id: 'BL', warmth: 1, sparkle: 1 },
+      { id: 'TL', warmth: 1, sparkle: 9 },
+      { id: 'BR', warmth: 9, sparkle: 1 },
+      { id: 'TR', warmth: 9, sparkle: 9 },
+    ];
+    const centres = [
+      { id: 'C_BL', warmth: 0, sparkle: 0 },
+      { id: 'C_TL', warmth: 0, sparkle: 10 },
+      { id: 'C_BR', warmth: 10, sparkle: 0 },
+      { id: 'C_TR', warmth: 10, sparkle: 10 },
+    ];
+
+    const val = validate({ k: 4, stickers, centres });
+    expect(val.ok).toBe(true);
+
+    const r1 = runIteration({ stickers, centres });
+    expect(r1.newAssignments).toEqual(['C_BL', 'C_TL', 'C_BR', 'C_TR']);
+    expect(r1.newCentres.find(c => c.id === 'C_BL')).toEqual({ id: 'C_BL', warmth: 1, sparkle: 1 });
+    expect(r1.newCentres.find(c => c.id === 'C_TL')).toEqual({ id: 'C_TL', warmth: 1, sparkle: 9 });
+    expect(r1.newCentres.find(c => c.id === 'C_BR')).toEqual({ id: 'C_BR', warmth: 9, sparkle: 1 });
+    expect(r1.newCentres.find(c => c.id === 'C_TR')).toEqual({ id: 'C_TR', warmth: 9, sparkle: 9 });
+    expect(r1.sse).toBe(0);
+  });
+});
+

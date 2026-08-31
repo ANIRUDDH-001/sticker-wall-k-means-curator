@@ -407,6 +407,10 @@
     var res = ctrl.editSticker(id, w, s);
     if (!res.ok) {
       showBanner(res.errors.map(function (e) { return e.message; }).join(' | '));
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
+      elInspect.innerHTML = '<em>Click a sticker on the canvas to inspect distances.</em>';
+      render();
     } else {
       clearBanner();
       btnStep.disabled = false;

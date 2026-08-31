@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const { createController } = require('../js/controller.js');
 const { COSMIC_CAFE }  = require('../data/demo.js');
@@ -57,17 +57,36 @@ describe('controller - editSticker (test 15)', function() {
     expect(c.currentStickers[3].sparkle).toBe(3.5);
   });
 
-  test('15b - editSticker with invalid coords returns ok:false, no state mutation', function() {
+  test('15b - editSticker with invalid coords returns ok:false, clears stale state, and leaves data uncorrupted', function() {
     var c = createController(COSMIC_CAFE);
     c.step();
-    var iterBefore = c.iteration;
+    expect(c.iteration).toBe(1);
+    expect(c.history.length).toBe(1);
 
     var result = c.editSticker('SUNRISE', -1, 5);
     expect(result.ok).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
 
-    // State must NOT have been mutated
-    expect(c.iteration).toBe(iterBefore);
+    // Stale run state must be cleared
+    expect(c.iteration).toBe(0);
+    expect(c.status).toBe('READY');
+    expect(c.history).toEqual([]);
+    expect(JSON.stringify(c.currentCentres)).toBe(JSON.stringify(c.originalCentres));
+
+    // Neither current nor original stickers should have invalid coordinates
+    expect(c.currentStickers[3].warmth).toBe(5);
+    expect(c.originalStickers[3].warmth).toBe(5);
+  });
+
+  test('15c - editSticker with non-existent ID returns ok:false and clears stale state', function() {
+    var c = createController(COSMIC_CAFE);
+    c.step();
+    var result = c.editSticker('DOES_NOT_EXIST', 5, 5);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(function(e) { return e.code === 'STICKER_NOT_FOUND'; })).toBe(true);
+    expect(c.iteration).toBe(0);
+    expect(c.history).toEqual([]);
+    expect(c.status).toBe('READY');
   });
 });
 
@@ -242,3 +261,66 @@ describe('controller - step-loop vs runToEnd identity (test 19)', function() {
     expect(JSON.stringify(history1)).toBe(JSON.stringify(history2));
   });
 });
+
+// ---------------------------------------------------------------------------
+// Test 21: Special character IDs work through controller and converge
+// ---------------------------------------------------------------------------
+describe('controller - special character IDs (test 21)', function() {
+  test('21 - arbitrary non-empty string IDs (with pipes, commas, spaces) cluster and converge safely', function() {
+    var specialCollection = {
+      k: 2,
+      stickers: [
+        { id: 'Sticker|A, 1', warmth: 1, sparkle: 1 },
+        { id: 'Sticker|B, 2', warmth: 2, sparkle: 2 },
+        { id: 'Sticker|C, 3', warmth: 8, sparkle: 8 },
+        { id: 'Sticker|D, 4', warmth: 9, sparkle: 9 },
+      ],
+      centres: [
+        { id: 'Centre|Alpha, #1', warmth: 0, sparkle: 0 },
+        { id: 'Centre|Beta, #2',  warmth: 10, sparkle: 10 },
+      ],
+    };
+
+    var c = createController(specialCollection);
+    c.runToEnd();
+    expect(c.status).toBe('CONVERGED');
+    expect(c.iteration).toBe(2);
+    expect(c.history[0].assignments).toEqual([
+      'Centre|Alpha, #1',
+      'Centre|Alpha, #1',
+      'Centre|Beta, #2',
+      'Centre|Beta, #2',
+    ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 22: 4-centre controller support (k=4)
+// ---------------------------------------------------------------------------
+describe('controller - 4-centre support (test 22)', function() {
+  test('22 - runs k=4 collection with 4 centres through controller', function() {
+    var k4Collection = {
+      k: 4,
+      stickers: [
+        { id: 'S_BL', warmth: 1, sparkle: 1 },
+        { id: 'S_TL', warmth: 1, sparkle: 9 },
+        { id: 'S_BR', warmth: 9, sparkle: 1 },
+        { id: 'S_TR', warmth: 9, sparkle: 9 },
+      ],
+      centres: [
+        { id: 'C_BL', warmth: 0, sparkle: 0 },
+        { id: 'C_TL', warmth: 0, sparkle: 10 },
+        { id: 'C_BR', warmth: 10, sparkle: 0 },
+        { id: 'C_TR', warmth: 10, sparkle: 10 },
+      ],
+    };
+
+    var c = createController(k4Collection);
+    c.runToEnd();
+    expect(c.status).toBe('CONVERGED');
+    expect(c.iteration).toBe(2);
+    expect(c.history[0].sse).toBe(0);
+    expect(c.history[0].centres.length).toBe(4);
+  });
+});
+
