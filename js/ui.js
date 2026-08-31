@@ -1317,6 +1317,9 @@
         updateFullscreenBtn(isFs);
       });
     });
+
+    // Auto-load Cosmic Cafe demo on startup for seamless interviewer presentation
+    onLoad();
   });
 
 })();

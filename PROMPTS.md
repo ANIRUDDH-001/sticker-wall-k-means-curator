@@ -42,16 +42,17 @@ This K-Means Curator was built with an AI coding assistant across five structure
 
 ---
 
-## Prompt 04 — Phase 4: Cosmic Cafe Visual Redesign & UX Polish
-**Goal:** Transform prototype UI into a polished, professional "Cosmic Cafe" themed engineering application.
+## Prompt 04 — Phase 4: Single-Screen Cosmic Observatory Redesign
+**Goal:** Redesign interface into a single-screen desktop/laptop observatory fitting completely within viewport (1366×768, 1440×900, 1920×1080) with zero page scrolling.
 **Constraints hard-coded:**
-- Deep-space dark visual language (`#080c16` to `#0f172a`), subtle cosmic glows, glassmorphism cards.
+- Deep-space visual language (`#060913` to `#0f172a`), subtle cosmic starfield, clean typography.
 - Multi-channel visual encoding: shapes, letters, colors, and text descriptions (Circle/Triangle/Square/Diamond).
 - Generic Key Event detection deriving ties, reassignments, and convergence dynamically.
 - Accessible focus rings, ARIA live regions, and `prefers-reduced-motion` support.
-- Fullscreen API toggle with fallback mode.
-**AI output review:** Added test suites P4-1 through P4-4 (77 tests green).
-**Refinements made:** Enhanced Fullscreen button with vendor prefixes, `fullscreenchange` event synchronization, and `.pseudo-fullscreen` fallback.
+- Fullscreen API toggle with vendor prefix support and `.pseudo-fullscreen` fallback.
+- Auto-load Cosmic Cafe baseline on startup.
+**AI output review:** Added test suites P4-1 through P4-4 (86 tests green).
+**Refinements made:** Unified top header controls and horizontal timeline strip to fit within single-screen viewports without vertical scrolling.
 
 ---
 
@@ -60,8 +61,10 @@ This K-Means Curator was built with an AI coding assistant across five structure
 **Constraints hard-coded:**
 - Zero oracle imports or hard-coded lookup tables in source code.
 - Step-by-step iteration must be byte-for-byte identical (`JSON.stringify`) to Run-to-End across all scenarios.
-- All 82 unit, integration, and UI tests green.
-**AI output review:** Added test suites QA-1 through QA-5 (82 tests green).
+- Full sticker lifecycle (add, remove, edit, drag) and centroid management ($k \in [2, 4]$) verified.
+- Invariance verification: sticker coordinates remain strictly fixed across all iterations.
+- All 94 unit, integration, and UI tests green.
+**AI output review:** Full suite of 94 tests passing across all test modules.
 **Refinements made:** Cleaned up documentation formatting, verified fresh dependency installation, and verified 100% acceptance compliance.
 
 ---
