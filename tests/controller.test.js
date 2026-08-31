@@ -586,5 +586,54 @@ describe('controller - mathematical truth and history separation (Phase 3)', fun
   });
 });
 
+// ---------------------------------------------------------------------------
+// Phase 4: Cosmic Cafe UI Markup, DOM Structure, & Accessibility
+// ---------------------------------------------------------------------------
+describe('ui markup and accessibility (Phase 4)', function() {
+  var fs = require('fs');
+  var path = require('path');
+  var html;
+
+  beforeAll(function() {
+    html = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
+  });
+
+  test('P4-1: index.html contains all required interactive and display DOM IDs', function() {
+    var requiredIds = [
+      'mainCanvas', 'selScenario', 'btnLoad', 'btnStep', 'btnRun', 'btnReset', 'btnFullscreen',
+      'selSticker', 'inpW', 'inpS', 'btnApply',
+      'selCentre', 'inpCW', 'inpCS', 'btnApplyCentre', 'btnAddCentre', 'btnRemoveCentre',
+      'timelineBox', 'timelineNotice', 'timelinePills',
+      'elIter', 'elStatus', 'elSSE', 'elSSETrend', 'elKBadge',
+      'eventCard', 'eventTitle', 'eventDetail',
+      'stageBox', 'stageDesc', 'stAssign', 'stUpdate', 'stMeasure', 'stCheck',
+      'panelCards', 'inspection', 'banner', 'legend'
+    ];
+
+    requiredIds.forEach(function(id) {
+      expect(html).toContain('id="' + id + '"');
+    });
+  });
+
+  test('P4-2: Canvas has size 560x560 for expanded high-DPI workspace', function() {
+    expect(html).toContain('width="560"');
+    expect(html).toContain('height="560"');
+  });
+
+  test('P4-3: Accessibility aria-labels, roles, and live regions are configured', function() {
+    expect(html).toContain('role="alert"');
+    expect(html).toContain('aria-live="assertive"');
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain('aria-label="Algorithm Timeline"');
+    expect(html).toContain('aria-label="Interactive 2D K-Means plot"');
+  });
+
+  test('P4-4: Fullscreen toggle button is present in app header', function() {
+    expect(html).toContain('id="btnFullscreen"');
+    expect(html).toContain('Full Screen');
+  });
+});
+
+
 
 

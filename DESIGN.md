@@ -56,6 +56,8 @@ createController(collection) **throws** on invalid input rather than returning a
 
 ## AI-influenced decisions
 
+- **Cosmic Cafe visual design language.** Implemented deep-space theme (`#080c16` to `#0f172a`), subtle cosmic glows, high contrast legible typography, glassmorphism cards, and data-driven shape-color-letter encodings (Circle/Triangle/Square/Diamond) preventing reliance on color alone.
+- **Generic Key Event detection.** Analyzes iteration transitions dynamically from historical snapshots to automatically highlight tie-breaks (e.g. Iteration 1 SUNRISE tie between NEBULA and EMBER), cluster reassignments with $\Delta\text{SSE}$, and convergence.
 - **Mathematical visualization truth (decision centres vs updated centres).** Assignment lines terminate at decision centres (`inputCentres` before update) rather than updated centres. A separate dashed drift arrow connects each decision centre to its updated centre position, making the 4 stages (Assign -> Update -> Measure -> Check) visually clear.
 - **Read-only historical timeline replay.** Replay scrubs through immutable history snapshots (`ctrl.history[i]`) allowing users to inspect past iterations without mutating the controller's active execution or baseline data.
 - **Three-tier state architecture (demo baseline -> working baseline -> active runState).** The immutable demo baseline (`originalStickers`, `originalCentres`) is deeply frozen and never mutated. The working baseline (`baselineStickers`, `baselineCentres`) stores the user's custom edits, added centres, or removed centres. The active run copies (`currentStickers`, `currentCentres`) execute the iterations. Reset always restores from the immutable demo baseline.
@@ -73,19 +75,19 @@ createController(collection) **throws** on invalid input rather than returning a
 
 | Prioritised | Deferred |
 |---|---|
-| Byte-identical Step vs Run to End (Test 19) | Speed control / scrubber |
+| Byte-identical Step vs Run to End (Test 19) | Scrubber slider |
 | Independent oracle verified twice by hand | Save-as-JSON export |
-| Empty-panel retention with no NaN path | Save-as-image button |
-| Legend with shape + colour + text | Colour-blind mode toggle |
-| CommonJS + zero build | ES modules |
-| Grep-provable DOM isolation in engine | Fancy animations |
+| Empty-panel retention with no NaN path | Save-as-image PNG export |
+| Accessible legend with shape + colour + text | Custom theme picker |
+| CommonJS + zero build | Complex UI framework (React/Vue) |
+| Grep-provable DOM isolation in engine | Heavy 3D WebGL background effects |
 | T20: throw-on-invalid (hard barrier) | Error-state controller pattern |
 
 ---
 
 ## What I would add with another day
 - Save panel memberships as JSON (optional PS acceptance item).
-- Save the finished sticker wall as a PNG.
-- Keyboard shortcut: space bar for Step, R for Reset.
-- A "step backward" button using history[iteration - 1].
-- Highlight stickers that changed panel this iteration (comparison of history[n-1].assignments to history[n].assignments).
+- Save the finished sticker wall as a PNG image.
+- Keyboard shortcut: Space bar for Step, R for Reset, F for Fullscreen.
+- Step backward / scrub timeline slider.
+- High-contrast / light-mode accessibility toggle.
