@@ -7,19 +7,19 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="cosmic-theme single-screen-layout">
+<body class="cosmic-theme observatory-layout">
 
-<!-- Header Strip -->
+<!-- Header Bar -->
 <header class="app-header">
   <div class="header-brand">
     <div class="brand-icon">&#10024;</div>
-    <div>
+    <div class="brand-text">
       <h1 class="brand-title">Cosmic Cafe Observatory</h1>
-      <div class="brand-subtitle">Sticker Wall K-Means Curator &middot; Candidate CC63 &middot; SPR26_D2_P02</div>
+      <span class="brand-subtitle">Sticker Wall K-Means Curator &middot; Candidate CC63 &middot; SPR26_D2_P02</span>
     </div>
   </div>
 
-  <!-- Primary Controls in Header -->
+  <!-- Central Primary Controls -->
   <div class="toolbar-section">
     <div class="toolbar-group">
       <label class="ctrl-label" for="selScenario">
@@ -55,106 +55,55 @@
 <!-- Error / Validation Banner -->
 <div id="banner" class="banner hidden" role="alert" aria-live="assertive"></div>
 
-<!-- Horizontal Timeline Bar -->
-<section id="timelineBox" class="timeline-bar" aria-label="Algorithm Timeline">
-  <div class="timeline-meta">
-    <strong class="timeline-title">&#128337; Timeline &amp; Replay</strong>
-    <span id="timelineNotice" class="timeline-notice"></span>
-  </div>
-  <div class="timeline-pills" id="timelinePills" role="tablist">
-    <button class="tp-pill active" role="tab" aria-selected="true">Iter 0 (Initial)</button>
-  </div>
-</section>
-
-<!-- Main Single-Screen Workspace -->
+<!-- Main Split Workspace (Map on Left ~65%, Telemetry/Inspector on Right ~35%) -->
 <main class="app-workspace">
-  <!-- Left Side: Interactive 2D Map (65%) -->
+  <!-- Map Pane (Hero) -->
   <section class="map-pane">
     <div class="map-card">
       <div class="map-header">
-        <h2 class="section-title">2D Clustering Map (Warmth &times; Sparkle)</h2>
-        <div class="canvas-hint">Direct manipulation: drag any sticker (&#9679;/&#9651;/&#9632;/&#9670;) or centroid (&#9733;) on the map. <span class="canvas-hint-note">Sticker coordinates remain fixed during K-Means iterations; only cluster assignments and centroids change.</span></div>
+        <div class="map-title-row">
+          <h2 class="section-title">2D Clustering Map</h2>
+          <span class="axis-guide">(Warmth &times; Sparkle, 0&ndash;10)</span>
+        </div>
+        <div class="canvas-hint">Direct drag enabled for stickers (&#9679;/&#9651;/&#9632;/&#9670;) and centroids (&#9733;). <span class="canvas-hint-note">Sticker positions remain fixed during K-Means. Assignments change. Centroids move.</span></div>
       </div>
       <div class="canvas-container">
         <canvas id="mainCanvas" width="560" height="560" aria-label="Interactive 2D K-Means plot"></canvas>
       </div>
     </div>
-
-    <!-- Bottom Strip Under Map: Panel Summary & Editors -->
-    <div class="bottom-utility-strip">
-      <!-- Active Cluster Panel Cards Grid -->
-      <div class="panels-section">
-        <h3 class="subsection-title">Active Cluster Panels</h3>
-        <div class="panel-cards" id="panelCards">
-          <em style="color:#94a3b8;font-size:12px">Load Demo to begin.</em>
-        </div>
-      </div>
-
-      <!-- Editors Row -->
-      <div class="editors-row">
-        <!-- Sticker Editor -->
-        <div class="editor-box" id="stickerEditorCard">
-          <span class="editor-badge">&#9998; Sticker:</span>
-          <select id="selSticker"><option value="">— load demo —</option></select>
-          <label class="compact-field"><span>W:</span><input type="number" id="inpW" min="0" max="10" step="0.1" disabled></label>
-          <label class="compact-field"><span>S:</span><input type="number" id="inpS" min="0" max="10" step="0.1" disabled></label>
-          <button id="btnApply" class="btn-compact" disabled>Apply</button>
-          <button id="btnAddSticker" class="btn-compact-outline" disabled title="Add custom sticker">+ Add</button>
-          <button id="btnRemoveSticker" class="btn-compact-outline" disabled title="Remove selected sticker">&minus; Del</button>
-        </div>
-
-        <!-- Centroid Editor -->
-        <div class="editor-box" id="centreEditorCard">
-          <span class="editor-badge">&#128205; Centroid:</span>
-          <select id="selCentre"><option value="">— load demo —</option></select>
-          <label class="compact-field"><span>W:</span><input type="number" id="inpCW" min="0" max="10" step="0.1" disabled></label>
-          <label class="compact-field"><span>S:</span><input type="number" id="inpCS" min="0" max="10" step="0.1" disabled></label>
-          <button id="btnApplyCentre" class="btn-compact" disabled>Update</button>
-          <button id="btnAddCentre" class="btn-compact-outline" disabled title="Add a new centre (max k=4)">+ Add</button>
-          <button id="btnRemoveCentre" class="btn-compact-outline" disabled title="Remove selected centre (min k=2)">&minus; Del</button>
-        </div>
-      </div>
-
-      <!-- Legend Footnote -->
-      <footer class="legend-footer" id="legend">
-        <span style="color:#38bdf8">&#9679; Circle = NEBULA (N)</span>
-        <span style="color:#c084fc">&#9651; Triangle = COMET (C)</span>
-        <span style="color:#fb923c">&#9632; Square = EMBER (E)</span>
-        <span>&#9674; grey diamond = unassigned</span>
-        <span>&#10005; hollow cross = decision centre</span>
-        <span>&#9733; glowing star = updated centroid</span>
-        <span>&rarr; dashed line = centroid drift</span>
-      </footer>
-    </div>
   </section>
 
-  <!-- Right Side: Sidebar Explanation (35%) -->
+  <!-- Right Telemetry & Explanation Pane -->
   <aside class="sidebar-pane">
-    <!-- Live Metrics Card -->
-    <div class="metric-card">
+    <!-- Telemetry Card (Iteration, Status, SSE with Delta, k) -->
+    <div class="telemetry-card">
       <div class="metric-grid">
         <div class="metric-item">
           <span class="metric-lbl">Iteration</span>
-          <strong id="elIter" class="metric-val">0</strong>
-          <span class="metric-sub">/ 20 cap</span>
+          <div class="metric-val-row">
+            <strong id="elIter" class="metric-val">0</strong>
+            <span class="metric-sub">/ 20 cap</span>
+          </div>
         </div>
         <div class="metric-item">
           <span class="metric-lbl">Status</span>
-          <span id="elStatus" class="status-pill sp-ready">READY</span>
-          <span id="elKBadge" class="metric-sub">k = 3</span>
+          <div class="metric-val-row">
+            <span id="elStatus" class="status-pill sp-ready">READY</span>
+            <span id="elKBadge" class="metric-sub">k = 3</span>
+          </div>
         </div>
         <div class="metric-item metric-item-wide">
           <span class="metric-lbl">Total SSE (Sum of Squared Errors)</span>
-          <div class="metric-sse-wrap">
+          <div class="metric-val-row">
             <strong id="elSSE" class="metric-val">&mdash;</strong>
             <span id="elSSETrend" class="sse-trend"></span>
+            <span class="metric-sub metric-sub-right">Signature stability convergence</span>
           </div>
-          <span class="metric-sub">Convergence: signature stability (not SSE threshold)</span>
         </div>
       </div>
     </div>
 
-    <!-- Key Event Card -->
+    <!-- Key Event Story Card -->
     <div class="event-card" id="eventCard">
       <div class="event-header">
         <span class="event-icon">&#128269;</span>
@@ -165,33 +114,93 @@
       </div>
     </div>
 
-    <!-- 4-Stage Flow Card -->
+    <!-- 4-Stage Connected Pipeline Stepper -->
     <div class="stage-card" id="stageBox">
-      <div class="stage-flow-nav">
-        <span class="stage-step" id="stAssign"><span class="sn">1</span> Assign</span>
-        <span class="stage-arr">&rarr;</span>
-        <span class="stage-step" id="stUpdate"><span class="sn">2</span> Update</span>
-        <span class="stage-arr">&rarr;</span>
-        <span class="stage-step" id="stMeasure"><span class="sn">3</span> Measure</span>
-        <span class="stage-arr">&rarr;</span>
-        <span class="stage-step" id="stCheck"><span class="sn">4</span> Check</span>
+      <div class="stage-flow-stepper">
+        <div class="stage-step" id="stAssign"><span class="sn">1</span> Assign</div>
+        <div class="stage-line"></div>
+        <div class="stage-step" id="stUpdate"><span class="sn">2</span> Update</div>
+        <div class="stage-line"></div>
+        <div class="stage-step" id="stMeasure"><span class="sn">3</span> Measure</div>
+        <div class="stage-line"></div>
+        <div class="stage-step" id="stCheck"><span class="sn">4</span> Check</div>
       </div>
       <div class="stage-desc" id="stageDesc">
         <em>Ready to start. Next Step will execute Stage 1 (Assign) against initial decision centres.</em>
       </div>
     </div>
 
-    <!-- Sticker Inspector Card -->
+    <!-- Structured Distance Inspector Matrix -->
     <div class="inspector-card">
       <h3 class="inspector-title">&#127919; Sticker Inspector</h3>
       <div id="inspection" class="inspector-body">
-        <em>Click any sticker on the canvas to inspect squared distances (d&sup2;) and tie-break reasoning.</em>
+        <div class="inspector-placeholder">Click any sticker on the canvas to inspect squared distances (d&sup2;) to decision centres and tie-break reasoning.</div>
       </div>
     </div>
   </aside>
 </main>
 
-<!-- Add Sticker Modal -->
+<!-- Bottom Utility Rail (Timeline + Cluster Summary + Unified Data Editor + Legend) -->
+<footer class="bottom-rail">
+  <!-- Timeline Row -->
+  <div class="rail-timeline" id="timelineBox" aria-label="Algorithm Timeline">
+    <div class="timeline-meta">
+      <strong class="timeline-title">&#128337; Timeline:</strong>
+      <span id="timelineNotice" class="timeline-notice"></span>
+    </div>
+    <div class="timeline-pills" id="timelinePills" role="tablist">
+      <button class="tp-pill active" role="tab" aria-selected="true">Iter 0 (Initial)</button>
+    </div>
+  </div>
+
+  <!-- Content Row: Cluster Summary + Unified Edit Strip -->
+  <div class="rail-content">
+    <!-- Cluster Summary Pills -->
+    <div class="rail-clusters" id="panelCards">
+      <em style="color:#94a3b8;font-size:11.5px">Load Demo to begin.</em>
+    </div>
+
+    <!-- Unified Data Editor Strip -->
+    <div class="rail-editor">
+      <!-- Sticker Editor Controls -->
+      <div class="editor-subgroup" id="stickerEditorCard">
+        <span class="rail-badge">&#9998; Sticker:</span>
+        <select id="selSticker"><option value="">— load demo —</option></select>
+        <label class="rail-field"><span>W:</span><input type="number" id="inpW" min="0" max="10" step="0.1" disabled></label>
+        <label class="rail-field"><span>S:</span><input type="number" id="inpS" min="0" max="10" step="0.1" disabled></label>
+        <button id="btnApply" class="btn-compact" disabled>Apply</button>
+        <button id="btnAddSticker" class="btn-compact-outline" disabled title="Add custom sticker">+ Add</button>
+        <button id="btnRemoveSticker" class="btn-compact-outline" disabled title="Remove selected sticker">&minus; Del</button>
+      </div>
+
+      <div class="rail-divider"></div>
+
+      <!-- Centroid Editor Controls -->
+      <div class="editor-subgroup" id="centreEditorCard">
+        <span class="rail-badge">&#128205; Centroid:</span>
+        <select id="selCentre"><option value="">— load demo —</option></select>
+        <label class="rail-field"><span>W:</span><input type="number" id="inpCW" min="0" max="10" step="0.1" disabled></label>
+        <label class="rail-field"><span>S:</span><input type="number" id="inpCS" min="0" max="10" step="0.1" disabled></label>
+        <button id="btnApplyCentre" class="btn-compact" disabled>Update</button>
+        <button id="btnAddCentre" class="btn-compact-outline" disabled title="Add centroid (max k=4)">+ Add</button>
+        <button id="btnRemoveCentre" class="btn-compact-outline" disabled title="Remove centroid (min k=2)">&minus; Del</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend Row -->
+  <div class="legend-footer" id="legend">
+    <span style="color:#38bdf8">&#9679; Circle = NEBULA (N)</span>
+    <span style="color:#c084fc">&#9651; Triangle = COMET (C)</span>
+    <span style="color:#fb923c">&#9632; Square = EMBER (E)</span>
+    <span>&#9674; grey diamond = unassigned</span>
+    <span>&#10005; hollow cross = decision centre</span>
+    <span>&#9733; glowing star = updated centroid</span>
+    <span>&rarr; dashed line = centroid drift</span>
+  </div>
+</footer>
+
+<!-- Modals for Add Sticker / Add Centroid -->
 <div id="modalAddSticker" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="titleAddSticker">
   <div class="modal-dialog">
     <h3 id="titleAddSticker" class="modal-title">&#9733; Add New Sticker</h3>
@@ -216,7 +225,6 @@
   </div>
 </div>
 
-<!-- Add Centroid Modal -->
 <div id="modalAddCentre" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="titleAddCentre">
   <div class="modal-dialog">
     <h3 id="titleAddCentre" class="modal-title">&#128205; Add New Centroid (Max k=4)</h3>
@@ -247,7 +255,6 @@
 <script src="data/demo.js"></script>
 <script src="data/emptyPanel.js"></script>
 <script src="js/ui.js"></script>
-
 </body>
 </html>
 

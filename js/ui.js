@@ -289,8 +289,20 @@
       }
     });
 
-    // 5. Stickers with smart collision offset
+    // 5. Stickers with deterministic smart collision-free label placement
     stickerHits = [];
+    var placedBoxes = [];
+
+    // Pre-populate centre label bounding boxes so sticker labels don't collide with them
+    centreHits.forEach(function (ch) {
+      placedBoxes.push({
+        minX: ch.screenX - 16,
+        maxX: ch.screenX + 80,
+        minY: ch.screenY - 14,
+        maxY: ch.screenY + 14
+      });
+    });
+
     stickers.forEach(function (s, i) {
       var x   = toX(s.warmth), y = toY(s.sparkle);
       stickerHits.push({ id: s.id, screenX: x, screenY: y, idx: i, warmth: s.warmth, sparkle: s.sparkle });
@@ -342,19 +354,65 @@
         ctx.stroke();
       }
 
-      // Smart label position (offset to avoid close overlap between GALAXY & COSMO)
-      var labelX = x + 11;
-      var labelY = y - 4;
-      if (s.id === 'COSMO') {
-        labelX = x - 11;
-        ctx.textAlign = 'right';
-      } else {
-        ctx.textAlign = 'left';
+      // Smart label placement (evaluates 6 candidates: right, above-right, below-right, left, above, below)
+      ctx.font = isSelected ? 'bold 10.5px sans-serif' : '10px sans-serif';
+      var textW = ctx.measureText(s.id).width;
+      var textH = 10;
+
+      var candidates = [
+        { dx: 12, dy: 3.5, align: 'left',   minX: x + 10, maxX: x + 12 + textW + 2, minY: y - 8, maxY: y + 8 },
+        { dx: 10, dy: -10, align: 'left',   minX: x + 8,  maxX: x + 10 + textW + 2, minY: y - 18, maxY: y - 2 },
+        { dx: 10, dy: 15,  align: 'left',   minX: x + 8,  maxX: x + 10 + textW + 2, minY: y + 5,  maxY: y + 21 },
+        { dx: -12, dy: 3.5, align: 'right', minX: x - 12 - textW - 2, maxX: x - 10, minY: y - 8, maxY: y + 8 },
+        { dx: 0,   dy: -14, align: 'center', minX: x - textW / 2 - 2, maxX: x + textW / 2 + 2, minY: y - 22, maxY: y - 6 },
+        { dx: 0,   dy: 18,  align: 'center', minX: x - textW / 2 - 2, maxX: x + textW / 2 + 2, minY: y + 8,  maxY: y + 24 }
+      ];
+
+      var chosen = candidates[0];
+      var bestScore = Infinity;
+
+      for (var ci = 0; ci < candidates.length; ci++) {
+        var cand = candidates[ci];
+        var score = 0;
+
+        // Boundary penalties
+        if (cand.minX < X_MIN) score += 60;
+        if (cand.maxX > X_MAX) score += 60;
+        if (cand.minY < Y_MIN) score += 60;
+        if (cand.maxY > Y_MAX) score += 60;
+
+        // Overlap with other stickers
+        for (var si = 0; si < stickers.length; si++) {
+          if (si === i) continue;
+          var ox = toX(stickers[si].warmth);
+          var oy = toY(stickers[si].sparkle);
+          if (ox >= cand.minX - 4 && ox <= cand.maxX + 4 && oy >= cand.minY - 4 && oy <= cand.maxY + 4) {
+            score += 40;
+          }
+        }
+
+        // Overlap with already placed boxes
+        for (var pi = 0; pi < placedBoxes.length; pi++) {
+          var pb = placedBoxes[pi];
+          var collides = !(cand.maxX < pb.minX || cand.minX > pb.maxX || cand.maxY < pb.minY || cand.minY > pb.maxY);
+          if (collides) score += 30;
+        }
+
+        if (score === 0) {
+          chosen = cand;
+          break;
+        }
+        if (score < bestScore) {
+          bestScore = score;
+          chosen = cand;
+        }
       }
 
+      placedBoxes.push(chosen);
+
       ctx.fillStyle  = isSelected ? '#38bdf8' : '#e2e8f0';
-      ctx.font       = isSelected ? 'bold 10px sans-serif' : '10px sans-serif';
-      ctx.fillText(s.id, labelX, labelY);
+      ctx.textAlign  = chosen.align;
+      ctx.fillText(s.id, x + chosen.dx, y + chosen.dy);
     });
 
     // 6. Drag feedback overlay
@@ -545,13 +603,15 @@
   }
 
   /* =========================================================================
-   * Panel Cards
+   * Panel Cards (Compact Cluster Summary)
    * ========================================================================= */
   function renderCards(updatedCentres, decisionCentres, assgn, movs, stickers) {
     elCards.innerHTML = '';
+    var shapeSymbols = { circle: '&#9679;', triangle: '&#9651;', square: '&#9632;', diamond: '&#9670;' };
+
     updatedCentres.forEach(function (c, i) {
-      var cfg = PANEL_CFG[i] || { colour: '#6b7280', letter: c.id.charAt(0) };
-      var ltr = cfg.letter || c.id.charAt(0);
+      var cfg = PANEL_CFG[i] || { colour: '#6b7280', letter: c.id.charAt(0), shape: 'circle' };
+      var sym = shapeSymbols[cfg.shape] || '&#9679;';
 
       var members = [];
       if (assgn) {
@@ -563,34 +623,24 @@
       var movStr = '&mdash;';
       if (movs && movs[c.id] !== undefined) {
         if (members.length === 0) {
-          movStr = fmt(0) + ' (retained &mdash; no members assigned)';
+          movStr = '\u0394 0.000 (retained)';
         } else {
-          movStr = fmt(movs[c.id]);
+          movStr = '\u0394 ' + fmt(movs[c.id]);
         }
       }
 
-      var membStr;
-      if (!assgn) {
-        membStr = '&mdash;';
-      } else if (members.length === 0) {
-        membStr = '<span style=\"color:#fde047;\">(none this iteration)</span>';
-      } else {
-        membStr = members.join(', ');
-      }
+      var membCount = members.length;
+      var membLabel = membCount === 0 ? '0 members' : (membCount + (membCount === 1 ? ' member' : ' members'));
 
       var div = document.createElement('div');
-      div.className         = 'panel-card';
-      div.style.borderColor = cfg.colour;
+      div.className = 'cluster-chip';
+      div.style.borderColor = cfg.colour + '55';
       div.innerHTML =
-        '<div class=\"card-hd\" style=\"background:' + cfg.colour + '22; border-bottom:1px solid ' + cfg.colour + '55;\">' +
-          '<span class=\"card-ltr\" style=\"color:' + cfg.colour + ';\">' + ltr + '</span> ' +
-          '<span style=\"color:#f8fafc;\">' + c.id + '</span>' +
-          '<span class=\"card-co\">(' + fmt(c.warmth) + ',\u202F' + fmt(c.sparkle) + ')</span>' +
-        '</div>' +
-        '<div class=\"card-bd\">' +
-          '<div><b>Movement:</b>\u2002' + movStr + '</div>' +
-          '<div><b>Members (' + members.length + '):</b>\u2002' + membStr + '</div>' +
-        '</div>';
+        '<span class=\"chip-sym\" style=\"color:' + cfg.colour + ';\">' + sym + '</span> ' +
+        '<span class=\"chip-id\">' + c.id + '</span> ' +
+        '<span class=\"chip-meta\">(' + membLabel + ')</span> ' +
+        '<span class=\"chip-meta\">(' + fmt(c.warmth) + ', ' + fmt(c.sparkle) + ')</span> ' +
+        '<span class=\"chip-delta\">' + movStr + '</span>';
       elCards.appendChild(div);
     });
   }
@@ -616,7 +666,7 @@
   }
 
   /* =========================================================================
-   * Sticker Inspection Panel
+   * Sticker Inspection Panel (Structured Distance Matrix)
    * ========================================================================= */
   function inspect(idx) {
     if (!ctrl) return;
@@ -648,41 +698,54 @@
       return d.id !== assignedId && Math.abs(d.d2 - minD2) <= EPS;
     });
 
-    var distHtml = dists.map(function (d) {
-      var isAssigned = (d.id === assignedId);
-      var wrapStyle = isAssigned ? 'style=\"font-weight:700;color:#38bdf8;background:rgba(56,189,248,0.15);padding:1px 6px;border-radius:4px;\"' : '';
-      return '<span class=\"di\" ' + wrapStyle + '><b>' + d.id + '</b>:\u2009' + fmt(d.d2) + '</span>';
-    }).join(' &middot; ');
+    var reassignmentHtml = '';
+    if (viewedIteration > 1 && ctrl.history.length >= viewedIteration) {
+      var prevSnap = ctrl.history[viewedIteration - 2];
+      if (prevSnap && prevSnap.assignments[idx] && prevSnap.assignments[idx] !== assignedId) {
+        reassignmentHtml = ' <span style=\"color:#f97316;font-size:11px;font-weight:700;\">(' + prevSnap.assignments[idx] + ' \u2192 ' + assignedId + ')</span>';
+      }
+    }
 
     var tieHtml = '';
     if (assignedId && ties.length > 0) {
       var tiedIds = ties.map(function (t) { return t.id; }).join(', ');
       tieHtml = '<div class=\"tie-note\">Tied with ' + tiedIds + ' (d\u00B2 = ' + fmt(minD2) + '); ' +
-        '<b>' + assignedId + '</b> assigned because ' + assignedId + ' is earlier in centre source order.</div>';
-    }
-
-    var reassignmentHtml = '';
-    if (viewedIteration > 1 && ctrl.history.length >= viewedIteration) {
-      var prevSnap = ctrl.history[viewedIteration - 2];
-      if (prevSnap && prevSnap.assignments[idx] && prevSnap.assignments[idx] !== assignedId) {
-        reassignmentHtml = ' <span style=\"color:#f97316;font-size:11.5px;font-weight:600;\">(\u2190 reassigned from ' + prevSnap.assignments[idx] + ')</span>';
-      }
+        '<b>' + assignedId + '</b> assigned via earlier centre source order.</div>';
     }
 
     var headerNote = (viewedIteration > 0)
-      ? 'Distances to decision centres (pre-update, Iteration ' + viewedIteration + '):'
+      ? 'Distances to decision centres (Iteration ' + viewedIteration + '):'
       : 'Initial distances to baseline centres:';
 
-    elInspect.innerHTML =
-      '<div><strong style=\"color:#f8fafc;font-size:14px;\">' + s.id + '</strong> (' + fmt(s.warmth) + ', ' + fmt(s.sparkle) + ')</div>' +
-      '<div style=\"font-size:12px;color:#94a3b8;margin-top:2px;\">' + headerNote + '</div>' +
-      '<div class=\"dist-row\">d\u00B2 \u2192 ' + distHtml + '</div>' +
-      (assignedId
-        ? '<div style=\"margin-top:4px;\">Assigned to: <b style=\"color:#38bdf8;\">' + assignedId + '</b>' + reassignmentHtml + '</div>'
-        : '<div style=\"margin-top:4px;\">Not yet assigned (iteration 0).</div>') +
-      tieHtml +
-      '<div style=\"font-size:11px;color:#64748b;margin-top:6px;\">* Sticker coordinates remain fixed during K-Means iterations.</div>';
+    var tableRows = dists.map(function (d) {
+      var isAssigned = (d.id === assignedId);
+      var isTied = ties.some(function (t) { return t.id === d.id; }) || (isAssigned && ties.length > 0);
+      var rowClass = isAssigned ? 'inspect-row-assigned' : (isTied ? 'inspect-row-tied' : '');
+      var resultBadge = isAssigned
+        ? '<span class=\"badge-assigned\">\u2713 ASSIGNED</span>'
+        : (isTied ? '<span class=\"badge-tied\">TIED</span>' : '&mdash;');
 
+      return '<tr class=\"' + rowClass + '\">' +
+        '<td><b>' + d.id + '</b></td>' +
+        '<td>' + fmt(d.d2) + '</td>' +
+        '<td>' + resultBadge + '</td>' +
+      '</tr>';
+    }).join('');
+
+    elInspect.innerHTML =
+      '<div class=\"inspect-card-inner\">' +
+        '<div class=\"inspect-hd\">' +
+          '<span class=\"inspect-id\">' + s.id + '</span> ' +
+          '<span class=\"inspect-coords\">(' + fmt(s.warmth) + ', ' + fmt(s.sparkle) + ')</span>' +
+          reassignmentHtml +
+        '</div>' +
+        '<div class=\"inspect-sub\">' + headerNote + '</div>' +
+        '<table class=\"inspect-table\">' +
+          '<thead><tr><th>Centroid</th><th>d\u00B2</th><th>Result</th></tr></thead>' +
+          '<tbody>' + tableRows + '</tbody>' +
+        '</table>' +
+        tieHtml +
+        '<div class=\"inspect-note\">* Sticker coordinates remain fixed during K-Means iterations.</div>' +
     render();
   }
 
