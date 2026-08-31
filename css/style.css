@@ -1,4 +1,4 @@
-﻿/* css/style.css — Cosmic Cafe Edition (CC63 · SPR26_D2_P02) */
+/* css/style.css — Cosmic Cafe Edition (CC63 · SPR26_D2_P02) */
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -723,3 +723,24 @@ canvas {
     grid-template-columns: 1fr;
   }
 }
+
+/* Pseudo-fullscreen fallback when native browser Fullscreen API is blocked/denied */
+body.pseudo-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  overflow-y: auto !important;
+  background-color: var(--bg-space) !important;
+}
+
+.btn-ghost.active-fullscreen {
+  background: rgba(56, 189, 248, 0.2);
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+}
+

@@ -879,15 +879,65 @@
     }
   }
 
-  function onToggleFullscreen() {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(function() {});
+  function isFullscreenActive() {
+    return !!(document.fullscreenElement ||
+              document.webkitFullscreenElement ||
+              document.mozFullScreenElement ||
+              document.msFullscreenElement ||
+              document.body.classList.contains('pseudo-fullscreen'));
+  }
+
+  function updateFullscreenBtn(active) {
+    if (!btnFullscreen) return;
+    if (active) {
       btnFullscreen.innerHTML = '&#x26F6; Exit Fullscreen';
+      btnFullscreen.classList.add('active-fullscreen');
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(function() {});
-        btnFullscreen.innerHTML = '&#x26F6; Full Screen';
+      btnFullscreen.innerHTML = '&#x26F6; Full Screen';
+      btnFullscreen.classList.remove('active-fullscreen');
+    }
+  }
+
+  function onToggleFullscreen() {
+    var doc = document.documentElement;
+    var req = doc.requestFullscreen || doc.webkitRequestFullscreen || doc.mozRequestFullScreen || doc.msRequestFullscreen;
+    var exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+
+    if (!isFullscreenActive()) {
+      if (req) {
+        try {
+          var promise = req.call(doc);
+          if (promise && promise.then) {
+            promise.then(function() {
+              updateFullscreenBtn(true);
+            }).catch(function() {
+              document.body.classList.add('pseudo-fullscreen');
+              updateFullscreenBtn(true);
+            });
+          } else {
+            updateFullscreenBtn(true);
+          }
+        } catch (err) {
+          document.body.classList.add('pseudo-fullscreen');
+          updateFullscreenBtn(true);
+        }
+      } else {
+        document.body.classList.add('pseudo-fullscreen');
+        updateFullscreenBtn(true);
       }
+    } else {
+      if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+        if (exit) {
+          try {
+            var exitPromise = exit.call(document);
+            if (exitPromise && exitPromise.catch) {
+              exitPromise.catch(function() {});
+            }
+          } catch (e) {}
+        }
+      }
+      document.body.classList.remove('pseudo-fullscreen');
+      updateFullscreenBtn(false);
     }
   }
 
@@ -1116,6 +1166,15 @@
     selCentre.addEventListener('change',  syncCentreInputs);
     selScenario.addEventListener('change', function () {
       btnLoad.textContent = 'Load ' + (selScenario.value === 'empty' ? 'Empty Panel' : 'Demo');
+    });
+
+    // Auto-update button label if user presses ESC to exit fullscreen
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(function (evt) {
+      document.addEventListener(evt, function () {
+        var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+        if (!isFs) document.body.classList.remove('pseudo-fullscreen');
+        updateFullscreenBtn(isFs);
+      });
     });
   });
 
