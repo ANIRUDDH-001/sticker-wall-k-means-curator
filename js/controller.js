@@ -1,4 +1,4 @@
-﻿/**
+/**
  * controller.js - Replay controller wrapping the K-Means engine.
  *
  * INVARIANTS:
@@ -11,7 +11,9 @@
 
 'use strict';
 
-const engine = require('./engine.js');
+const engine = (typeof require !== 'undefined')
+  ? require('./engine.js')
+  : (typeof window !== 'undefined' ? window.KMeansEngine : null);
 
 // ---------------------------------------------------------------------------
 // Helpers

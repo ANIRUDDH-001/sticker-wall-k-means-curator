@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ui.js - DOM wiring, Canvas rendering, event handlers.
  *
  * Zero engine/logic code here. All K-Means computation goes through
@@ -88,20 +88,7 @@
     ctx.stroke();
   }
 
-  /* -------------------------------------------------------------------------
-   * Main render — called after every state change
-   * ---------------------------------------------------------------------- */
-  function render() {
-    if (!ctrl) return;
-
-    var stickers    = ctrl.currentStickers;
-    var centres     = ctrl.currentCentres;
-    var origCentres = ctrl.originalCentres;
-    var history     = ctrl.history;
-    var snap        = history.length ? history[history.length - 1] : null;
-    var assgn       = snap ? snap.assignments : null;
-    var movs        = snap ? snap.movements   : null;
-
+  function renderGrid() {
     // -- Clear ----------------------------------------------------------------
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#fff';
@@ -136,6 +123,26 @@
     ctx.textAlign = 'center';
     ctx.font = '10px sans-serif';
     ctx.fillText('warmth', (X_MIN + X_MAX) / 2, canvas.height - 1);
+  }
+
+  /* -------------------------------------------------------------------------
+   * Main render — called after every state change
+   * ---------------------------------------------------------------------- */
+  function render() {
+    if (!ctrl) {
+      renderGrid();
+      return;
+    }
+
+    renderGrid();
+
+    var stickers    = ctrl.currentStickers;
+    var centres     = ctrl.currentCentres;
+    var origCentres = ctrl.originalCentres;
+    var history     = ctrl.history;
+    var snap        = history.length ? history[history.length - 1] : null;
+    var assgn       = snap ? snap.assignments : null;
+    var movs        = snap ? snap.movements   : null;
 
     // -- Assignment lines (only after first iteration) -----------------------
     if (assgn) {
@@ -459,6 +466,8 @@
     btnRun    = document.getElementById('btnRun');
     btnReset  = document.getElementById('btnReset');
     btnApply  = document.getElementById('btnApply');
+
+    renderGrid();
 
     selSticker = document.getElementById('selSticker');
     inpW       = document.getElementById('inpW');
