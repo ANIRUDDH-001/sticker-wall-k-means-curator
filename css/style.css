@@ -273,15 +273,15 @@ button:disabled {
 }
 
 /* ==========================================================================
-   Main Split Workspace (Map Left ~65%, Telemetry/Inspector Right ~35%)
+   Main Split Workspace (Map Left ~68%, Telemetry/Inspector Right ~32%)
    ========================================================================== */
 .app-workspace {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 10px;
-  padding: 8px 14px 4px;
+  grid-template-columns: 1fr 370px;
+  gap: 8px;
+  padding: 6px 12px 4px;
   overflow: hidden;
 }
 
@@ -301,7 +301,7 @@ button:disabled {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 6px 10px;
+  padding: 4px 6px 6px;
   overflow: hidden;
 }
 
@@ -309,7 +309,7 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   flex-shrink: 0;
 }
 
@@ -343,18 +343,17 @@ button:disabled {
 .canvas-container {
   flex: 1;
   min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
   overflow: hidden;
 }
 
 #mainCanvas {
-  max-width: 100%;
-  max-height: 100%;
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
-  border-radius: 6px;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
   cursor: crosshair;
   background: #080c16;
 }

@@ -22,7 +22,7 @@
     { colour: '#34d399', letter: 'P', shape: 'diamond',  name: 'PULSAR' },
   ];
 
-  var X_MIN = 45, X_MAX = 515, Y_MIN = 45, Y_MAX = 515;
+  var X_MIN = 34, X_MAX = 540, Y_MIN = 18, Y_MAX = 532;
   var STICKER_R = 9;
   var HIT_R     = 14;
   var EPS       = 1e-12;
@@ -56,8 +56,38 @@
       elCards, elInspect, elBanner, elLegend;
 
   /* -------------------------------------------------------------------------
-   * Coordinate helpers
+   * Dynamic Plot Bounds & Coordinate helpers
    * ---------------------------------------------------------------------- */
+  function updatePlotBounds() {
+    var w = (canvas && canvas.width > 50) ? canvas.width : 560;
+    var h = (canvas && canvas.height > 50) ? canvas.height : 560;
+    var padLeft = 32;
+    var padRight = 16;
+    var padTop = 16;
+    var padBottom = 26;
+    X_MIN = padLeft;
+    X_MAX = Math.max(X_MIN + 50, w - padRight);
+    Y_MIN = padTop;
+    Y_MAX = Math.max(Y_MIN + 50, h - padBottom);
+  }
+
+  function resizeCanvas() {
+    if (!canvas || !canvas.parentElement) return;
+    var container = canvas.parentElement;
+    var rect = container.getBoundingClientRect ? container.getBoundingClientRect() : null;
+    if (!rect) return;
+    var w = Math.floor(rect.width);
+    var h = Math.floor(rect.height);
+    if (w > 50 && h > 50) {
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+        updatePlotBounds();
+        render();
+      }
+    }
+  }
+
   function toX(w) { return X_MIN + w * (X_MAX - X_MIN) / 10; }
   function toY(s) { return Y_MAX - s * (Y_MAX - Y_MIN) / 10; }
   function fromX(x) { return Math.max(0, Math.min(10, (x - X_MIN) / (X_MAX - X_MIN) * 10)); }
@@ -1370,16 +1400,21 @@
       btnLoad.textContent = 'Load ' + (selScenario.value === 'empty' ? 'Empty Panel' : 'Demo');
     });
 
+    window.addEventListener('resize', resizeCanvas);
+
     // Auto-update button label if user presses ESC to exit fullscreen
     ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(function (evt) {
       document.addEventListener(evt, function () {
         var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
         if (!isFs) document.body.classList.remove('pseudo-fullscreen');
         updateFullscreenBtn(isFs);
+        setTimeout(resizeCanvas, 50);
       });
     });
 
     // Auto-load Cosmic Cafe demo on startup for seamless interviewer presentation
+    resizeCanvas();
+    updatePlotBounds();
     onLoad();
   });
 
