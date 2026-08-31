@@ -160,6 +160,8 @@
           <input type="number" id="inpS" min="0" max="10" step="0.1" disabled>
         </label>
         <button id="btnApply" class="btn-secondary" disabled>Apply Coords</button>
+        <button id="btnAddSticker" class="btn-outline" disabled title="Add a new custom sticker">+ Add Sticker</button>
+        <button id="btnRemoveSticker" class="btn-outline" disabled title="Remove selected sticker">&minus; Remove</button>
       </div>
     </div>
 
@@ -205,6 +207,56 @@
     <span>&rarr; dashed line = centroid drift</span>
   </footer>
 </main>
+
+<!-- Add Sticker Modal -->
+<div id="modalAddSticker" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="titleAddSticker">
+  <div class="modal-dialog">
+    <h3 id="titleAddSticker" class="modal-title">&#9733; Add New Sticker</h3>
+    <form id="formAddSticker" class="modal-form" onsubmit="return false;">
+      <label class="modal-field">
+        <span>Sticker ID:</span>
+        <input type="text" id="inpNewStickerId" placeholder="e.g. ASTEROID" required>
+      </label>
+      <label class="modal-field">
+        <span>Warmth (0 &ndash; 10):</span>
+        <input type="number" id="inpNewStickerW" min="0" max="10" step="0.1" value="5.0" required>
+      </label>
+      <label class="modal-field">
+        <span>Sparkle (0 &ndash; 10):</span>
+        <input type="number" id="inpNewStickerS" min="0" max="10" step="0.1" value="5.0" required>
+      </label>
+      <div class="modal-actions">
+        <button type="button" id="btnCancelAddSticker" class="btn-ghost">Cancel</button>
+        <button type="button" id="btnConfirmAddSticker" class="btn-primary">Add Sticker</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Centroid Modal -->
+<div id="modalAddCentre" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="titleAddCentre">
+  <div class="modal-dialog">
+    <h3 id="titleAddCentre" class="modal-title">&#128205; Add New Centroid (Max k=4)</h3>
+    <form id="formAddCentre" class="modal-form" onsubmit="return false;">
+      <label class="modal-field">
+        <span>Centroid ID:</span>
+        <input type="text" id="inpNewCentreId" placeholder="e.g. PULSAR" required>
+      </label>
+      <label class="modal-field">
+        <span>Warmth (0 &ndash; 10):</span>
+        <input type="number" id="inpNewCentreW" min="0" max="10" step="0.1" value="5.0" required>
+      </label>
+      <label class="modal-field">
+        <span>Sparkle (0 &ndash; 10):</span>
+        <input type="number" id="inpNewCentreS" min="0" max="10" step="0.1" value="5.0" required>
+      </label>
+      <div class="modal-actions">
+        <button type="button" id="btnCancelAddCentre" class="btn-ghost">Cancel</button>
+        <button type="button" id="btnConfirmAddCentre" class="btn-primary">Add Centroid</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- Scripts -->
 <script src="js/engine.js"></script>

@@ -184,6 +184,96 @@ function createController(collection) {
   }
 
   // -------------------------------------------------------------------------
+  // addSticker(id, warmth, sparkle)
+  //   Count from 2 to 30; unique non-empty ID; 0..10 coords.
+  // -------------------------------------------------------------------------
+  function addSticker(id, warmth, sparkle) {
+    var errors = [];
+
+    if (baselineStickers.length >= 30) {
+      errors.push({ code: 'MAX_STICKERS_EXCEEDED', message: 'Cannot add sticker: maximum count is 30.' });
+    }
+    if (typeof id !== 'string' || id.trim() === '') {
+      errors.push({ code: 'EMPTY_ID', message: 'Sticker ID must be a non-empty string.' });
+    } else if (baselineStickers.some(function(s) { return s.id === id; })) {
+      errors.push({ code: 'DUPLICATE_STICKER_ID', message: 'Sticker ID "' + id + '" already exists.' });
+    }
+    if (!Number.isFinite(warmth) || warmth < 0 || warmth > 10) {
+      errors.push({ code: 'INVALID_WARMTH',
+        message: 'warmth must be a finite number in [0, 10]; got ' + warmth + '.' });
+    }
+    if (!Number.isFinite(sparkle) || sparkle < 0 || sparkle > 10) {
+      errors.push({ code: 'INVALID_SPARKLE',
+        message: 'sparkle must be a finite number in [0, 10]; got ' + sparkle + '.' });
+    }
+
+    if (errors.length > 0) {
+      currentCentres  = deepCopy(baselineCentres);
+      currentStickers = deepCopy(baselineStickers);
+      iteration     = 0;
+      status        = 'READY';
+      history       = [];
+      prevSignature = '';
+      return { ok: false, errors: errors };
+    }
+
+    baselineStickers.push({ id: id, warmth: warmth, sparkle: sparkle });
+    currentStickers = deepCopy(baselineStickers);
+    currentCentres  = deepCopy(baselineCentres);
+
+    iteration    = 0;
+    status       = 'READY';
+    history      = [];
+    prevSignature = '';
+
+    return { ok: true };
+  }
+
+  // -------------------------------------------------------------------------
+  // removeSticker(id)
+  //   Count cannot fall below 2 or below k.
+  // -------------------------------------------------------------------------
+  function removeSticker(id) {
+    var errors = [];
+
+    if (baselineStickers.length <= 2) {
+      errors.push({ code: 'MIN_STICKERS_REQUIRED', message: 'Cannot remove sticker: minimum count is 2.' });
+    }
+    if (baselineStickers.length - 1 < baselineCentres.length) {
+      errors.push({ code: 'STICKER_COUNT_BELOW_K', message: 'Cannot remove sticker: sticker count cannot fall below centroid count (k=' + baselineCentres.length + ').' });
+    }
+
+    var idx = -1;
+    for (var i = 0; i < baselineStickers.length; i++) {
+      if (baselineStickers[i].id === id) { idx = i; break; }
+    }
+    if (idx === -1) {
+      errors.push({ code: 'STICKER_NOT_FOUND', message: 'No sticker with ID "' + id + '".' });
+    }
+
+    if (errors.length > 0) {
+      currentCentres  = deepCopy(baselineCentres);
+      currentStickers = deepCopy(baselineStickers);
+      iteration     = 0;
+      status        = 'READY';
+      history       = [];
+      prevSignature = '';
+      return { ok: false, errors: errors };
+    }
+
+    baselineStickers.splice(idx, 1);
+    currentStickers = deepCopy(baselineStickers);
+    currentCentres  = deepCopy(baselineCentres);
+
+    iteration    = 0;
+    status       = 'READY';
+    history      = [];
+    prevSignature = '';
+
+    return { ok: true };
+  }
+
+  // -------------------------------------------------------------------------
   // editCentre(id, warmth, sparkle)
   //   On success: updates baseline & current centres; clears run state.
   // -------------------------------------------------------------------------
@@ -338,13 +428,15 @@ function createController(collection) {
     get history()          { return history; },
 
     // Methods
-    step:         step,
-    runToEnd:     runToEnd,
-    reset:        reset,
-    editSticker:  editSticker,
-    editCentre:   editCentre,
-    addCentre:    addCentre,
-    removeCentre: removeCentre,
+    step:          step,
+    runToEnd:      runToEnd,
+    reset:         reset,
+    editSticker:   editSticker,
+    addSticker:    addSticker,
+    removeSticker: removeSticker,
+    editCentre:    editCentre,
+    addCentre:     addCentre,
+    removeCentre:  removeCentre,
   };
 }
 

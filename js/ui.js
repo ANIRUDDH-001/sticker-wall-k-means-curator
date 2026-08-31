@@ -45,8 +45,10 @@
    * ---------------------------------------------------------------------- */
   var canvas, ctx,
       selScenario, btnLoad, btnStep, btnRun, btnReset, btnFullscreen,
-      selSticker, inpW, inpS, btnApply,
+      selSticker, inpW, inpS, btnApply, btnAddSticker, btnRemoveSticker,
       selCentre, inpCW, inpCS, btnApplyCentre, btnAddCentre, btnRemoveCentre,
+      modalAddSticker, inpNewStickerId, inpNewStickerW, inpNewStickerS, btnConfirmAddSticker, btnCancelAddSticker,
+      modalAddCentre, inpNewCentreId, inpNewCentreW, inpNewCentreS, btnConfirmAddCentre, btnCancelAddCentre,
       timelineBox, timelineNotice, timelinePills,
       elIter, elStatus, elSSE, elSSETrend, elKBadge,
       eventCard, eventTitle, eventDetail,
@@ -686,6 +688,8 @@
       inpS.disabled = true;
       btnApply.disabled = true;
     }
+    if (btnAddSticker) btnAddSticker.disabled = !ctrl || ctrl.baselineStickers.length >= 30;
+    if (btnRemoveSticker) btnRemoveSticker.disabled = !ctrl || ctrl.baselineStickers.length <= 2;
   }
 
   function syncCentreDropdown() {
@@ -713,8 +717,8 @@
       inpCS.disabled = true;
       btnApplyCentre.disabled = true;
     }
-    btnAddCentre.disabled = ctrl.k >= 4;
-    btnRemoveCentre.disabled = ctrl.k <= 2;
+    if (btnAddCentre) btnAddCentre.disabled = !ctrl || ctrl.k >= 4;
+    if (btnRemoveCentre) btnRemoveCentre.disabled = !ctrl || ctrl.k <= 2;
   }
 
   /* =========================================================================
@@ -810,6 +814,77 @@
     }
   }
 
+  function onOpenAddStickerModal() {
+    if (!ctrl || isAnimating) return;
+    if (ctrl.baselineStickers.length >= 30) {
+      showBanner('Cannot add sticker: maximum count is 30.');
+      return;
+    }
+    inpNewStickerId.value = 'STICKER_' + (ctrl.baselineStickers.length + 1);
+    inpNewStickerW.value = '5.0';
+    inpNewStickerS.value = '5.0';
+    modalAddSticker.classList.remove('hidden');
+    inpNewStickerId.focus();
+  }
+
+  function onCloseAddStickerModal() {
+    modalAddSticker.classList.add('hidden');
+  }
+
+  function onConfirmAddSticker() {
+    if (!ctrl || isAnimating) return;
+    var id = inpNewStickerId.value.trim();
+    var w = parseFloat(inpNewStickerW.value);
+    var s = parseFloat(inpNewStickerS.value);
+
+    var res = ctrl.addSticker(id, w, s);
+    onCloseAddStickerModal();
+    viewedIteration = 0;
+    if (!res.ok) {
+      showBanner(res.errors.map(function (e) { return e.message; }).join(' | '));
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
+      render();
+    } else {
+      clearBanner();
+      syncStickerDropdown();
+      selSticker.value = id;
+      syncStickerInputs();
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
+      render();
+    }
+  }
+
+  function onRemoveSticker() {
+    if (!ctrl || isAnimating) return;
+    if (ctrl.baselineStickers.length <= 2) {
+      showBanner('Cannot remove sticker: minimum count is 2.');
+      return;
+    }
+    if (ctrl.baselineStickers.length - 1 < ctrl.k) {
+      showBanner('Cannot remove sticker: sticker count cannot fall below centroid count (k=' + ctrl.k + ').');
+      return;
+    }
+    var id = selSticker.value;
+    if (!id) return;
+    var res = ctrl.removeSticker(id);
+    viewedIteration = 0;
+    if (!res.ok) {
+      showBanner(res.errors.map(function (e) { return e.message; }).join(' | '));
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
+      render();
+    } else {
+      clearBanner();
+      syncStickerDropdown();
+      syncStickerInputs();
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
+      render();
+    }
+  }
+
   function onApplyCentre() {
     if (!ctrl || isAnimating) return;
     var id = selCentre.value;
@@ -830,20 +905,36 @@
     }
   }
 
-  function onAddCentre() {
+  function onOpenAddCentreModal() {
     if (!ctrl || isAnimating) return;
     if (ctrl.k >= 4) {
       showBanner('Cannot add centre: maximum k is 4.');
       return;
     }
-    var defaultId = 'PANEL_' + (ctrl.k + 1);
-    var id = window.prompt ? window.prompt('Enter new centroid ID (2-30 chars):', defaultId) : defaultId;
-    if (!id) return;
-    id = id.trim();
-    var res = ctrl.addCentre(id, 5, 5);
+    inpNewCentreId.value = 'PANEL_' + (ctrl.k + 1);
+    inpNewCentreW.value = '5.0';
+    inpNewCentreS.value = '5.0';
+    modalAddCentre.classList.remove('hidden');
+    inpNewCentreId.focus();
+  }
+
+  function onCloseAddCentreModal() {
+    modalAddCentre.classList.add('hidden');
+  }
+
+  function onConfirmAddCentre() {
+    if (!ctrl || isAnimating) return;
+    var id = inpNewCentreId.value.trim();
+    var w = parseFloat(inpNewCentreW.value);
+    var s = parseFloat(inpNewCentreS.value);
+
+    var res = ctrl.addCentre(id, w, s);
+    onCloseAddCentreModal();
     viewedIteration = 0;
     if (!res.ok) {
       showBanner(res.errors.map(function (e) { return e.message; }).join(' | '));
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
       render();
     } else {
       clearBanner();
@@ -868,6 +959,8 @@
     viewedIteration = 0;
     if (!res.ok) {
       showBanner(res.errors.map(function (e) { return e.message; }).join(' | '));
+      btnStep.disabled = false;
+      btnRun.disabled  = false;
       render();
     } else {
       clearBanner();
@@ -1103,10 +1196,19 @@
     btnReset      = document.getElementById('btnReset');
     btnFullscreen = document.getElementById('btnFullscreen');
 
-    selSticker    = document.getElementById('selSticker');
-    inpW          = document.getElementById('inpW');
-    inpS          = document.getElementById('inpS');
-    btnApply      = document.getElementById('btnApply');
+    selSticker       = document.getElementById('selSticker');
+    inpW             = document.getElementById('inpW');
+    inpS             = document.getElementById('inpS');
+    btnApply         = document.getElementById('btnApply');
+    btnAddSticker    = document.getElementById('btnAddSticker');
+    btnRemoveSticker = document.getElementById('btnRemoveSticker');
+
+    modalAddSticker      = document.getElementById('modalAddSticker');
+    inpNewStickerId      = document.getElementById('inpNewStickerId');
+    inpNewStickerW       = document.getElementById('inpNewStickerW');
+    inpNewStickerS       = document.getElementById('inpNewStickerS');
+    btnConfirmAddSticker = document.getElementById('btnConfirmAddSticker');
+    btnCancelAddSticker  = document.getElementById('btnCancelAddSticker');
 
     selCentre       = document.getElementById('selCentre');
     inpCW           = document.getElementById('inpCW');
@@ -1114,6 +1216,13 @@
     btnApplyCentre  = document.getElementById('btnApplyCentre');
     btnAddCentre    = document.getElementById('btnAddCentre');
     btnRemoveCentre = document.getElementById('btnRemoveCentre');
+
+    modalAddCentre      = document.getElementById('modalAddCentre');
+    inpNewCentreId      = document.getElementById('inpNewCentreId');
+    inpNewCentreW       = document.getElementById('inpNewCentreW');
+    inpNewCentreS       = document.getElementById('inpNewCentreS');
+    btnConfirmAddCentre = document.getElementById('btnConfirmAddCentre');
+    btnCancelAddCentre  = document.getElementById('btnCancelAddCentre');
 
     timelineBox    = document.getElementById('timelineBox');
     timelineNotice = document.getElementById('timelineNotice');
@@ -1149,10 +1258,16 @@
     btnReset.addEventListener('click', onReset);
     btnFullscreen.addEventListener('click', onToggleFullscreen);
     btnApply.addEventListener('click', onApplySticker);
+    if (btnAddSticker) btnAddSticker.addEventListener('click', onOpenAddStickerModal);
+    if (btnRemoveSticker) btnRemoveSticker.addEventListener('click', onRemoveSticker);
+    if (btnConfirmAddSticker) btnConfirmAddSticker.addEventListener('click', onConfirmAddSticker);
+    if (btnCancelAddSticker) btnCancelAddSticker.addEventListener('click', onCloseAddStickerModal);
 
     btnApplyCentre.addEventListener('click', onApplyCentre);
-    btnAddCentre.addEventListener('click', onAddCentre);
-    btnRemoveCentre.addEventListener('click', onRemoveCentre);
+    if (btnAddCentre) btnAddCentre.addEventListener('click', onOpenAddCentreModal);
+    if (btnRemoveCentre) btnRemoveCentre.addEventListener('click', onRemoveCentre);
+    if (btnConfirmAddCentre) btnConfirmAddCentre.addEventListener('click', onConfirmAddCentre);
+    if (btnCancelAddCentre) btnCancelAddCentre.addEventListener('click', onCloseAddCentreModal);
 
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onMouseMove);

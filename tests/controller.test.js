@@ -825,7 +825,7 @@ describe('controller - formal QA & acceptance audit (Phase 5)', function() {
     var origCentresSnap = JSON.stringify(c.originalCentres);
 
     // Edit sticker
-    c.editSticker('GALAXY', 0.5, 0.5);
+    c.editSticker('FROST', 0.5, 0.5);
     expect(JSON.stringify(c.originalStickers)).toBe(origStickersSnap);
 
     // Edit centre
@@ -874,6 +874,104 @@ describe('controller - formal QA & acceptance audit (Phase 5)', function() {
     spy.mockRestore();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 2: Full Sticker & Centroid Management Suite
+// ---------------------------------------------------------------------------
+describe('controller - interactive sticker & centroid management (Phase 2)', function() {
+  test('P2-S1: Add custom sticker updates baseline and allows clustering to converge', function() {
+    var c = createController(COSMIC_CAFE);
+    var origCount = c.baselineStickers.length;
+
+    var res = c.addSticker('ASTEROID', 5.5, 6.5);
+    expect(res.ok).toBe(true);
+    expect(c.baselineStickers.length).toBe(origCount + 1);
+    expect(c.currentStickers.find(function(s) { return s.id === 'ASTEROID'; })).toEqual({
+      id: 'ASTEROID',
+      warmth: 5.5,
+      sparkle: 6.5
+    });
+
+    c.runToEnd();
+    expect(c.status).toBe('CONVERGED');
+    expect(c.history[c.history.length - 1].stickers.length).toBe(origCount + 1);
+  });
+
+  test('P2-S2: Add sticker rejects duplicate IDs, empty IDs, invalid coords, and exceeding max 30', function() {
+    var c = createController(COSMIC_CAFE);
+
+    // Duplicate ID
+    var resDup = c.addSticker('FROST', 1, 1);
+    expect(resDup.ok).toBe(false);
+    expect(resDup.errors.some(function(e) { return e.code === 'DUPLICATE_STICKER_ID'; })).toBe(true);
+
+    // Empty ID
+    var resEmpty = c.addSticker('   ', 1, 1);
+    expect(resEmpty.ok).toBe(false);
+    expect(resEmpty.errors.some(function(e) { return e.code === 'EMPTY_ID'; })).toBe(true);
+
+    // Invalid coords
+    var resCoord = c.addSticker('BAD_COORD', -1, 11);
+    expect(resCoord.ok).toBe(false);
+    expect(resCoord.errors.some(function(e) { return e.code === 'INVALID_WARMTH'; })).toBe(true);
+    expect(resCoord.errors.some(function(e) { return e.code === 'INVALID_SPARKLE'; })).toBe(true);
+
+    // Fill up to 30 stickers
+    for (var i = c.baselineStickers.length + 1; i <= 30; i++) {
+      expect(c.addSticker('ST_' + i, 5, 5).ok).toBe(true);
+    }
+    expect(c.baselineStickers.length).toBe(30);
+
+    // 31st sticker rejected
+    var resMax = c.addSticker('ST_31', 5, 5);
+    expect(resMax.ok).toBe(false);
+    expect(resMax.errors.some(function(e) { return e.code === 'MAX_STICKERS_EXCEEDED'; })).toBe(true);
+  });
+
+  test('P2-S3: Remove sticker updates baseline, rejects removal below minimum or below k', function() {
+    var c = createController(COSMIC_CAFE);
+    var count = c.baselineStickers.length; // 10, k=3
+
+    // Remove valid sticker
+    var res = c.removeSticker('AURORA');
+    expect(res.ok).toBe(true);
+    expect(c.baselineStickers.length).toBe(count - 1);
+    expect(c.baselineStickers.some(function(s) { return s.id === 'AURORA'; })).toBe(false);
+
+    // Remove non-existent sticker
+    var resNotFound = c.removeSticker('NON_EXISTENT');
+    expect(resNotFound.ok).toBe(false);
+    expect(resNotFound.errors.some(function(e) { return e.code === 'STICKER_NOT_FOUND'; })).toBe(true);
+
+    // Remove down until sticker count would drop below k=3
+    while (c.baselineStickers.length > 3) {
+      c.removeSticker(c.baselineStickers[c.baselineStickers.length - 1].id);
+    }
+    expect(c.baselineStickers.length).toBe(3);
+
+    // Removing 1 more sticker makes sticker count 2 < k (3)
+    var resBelowK = c.removeSticker(c.baselineStickers[0].id);
+    expect(resBelowK.ok).toBe(false);
+    expect(resBelowK.errors.some(function(e) { return e.code === 'STICKER_COUNT_BELOW_K'; })).toBe(true);
+  });
+
+  test('P2-S4: Modal and sticker control DOM elements exist in index.html', function() {
+    var fs = require('fs');
+    var path = require('path');
+    var html = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
+
+    var requiredP2Ids = [
+      'btnAddSticker', 'btnRemoveSticker',
+      'modalAddSticker', 'inpNewStickerId', 'inpNewStickerW', 'inpNewStickerS', 'btnConfirmAddSticker', 'btnCancelAddSticker',
+      'modalAddCentre', 'inpNewCentreId', 'inpNewCentreW', 'inpNewCentreS', 'btnConfirmAddCentre', 'btnCancelAddCentre'
+    ];
+
+    requiredP2Ids.forEach(function(id) {
+      expect(html).toContain('id="' + id + '"');
+    });
+  });
+});
+
 
 
 
