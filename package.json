@@ -1,0 +1,19 @@
+{
+  "name": "sticker-wall-k-means-curator",
+  "version": "1.0.0",
+  "description": "Run tests: `npm install && npm test` Run app: open `index.html` in a browser (no server required).",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --passWithNoTests"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "jest": "^30.5.0"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  }
+}
