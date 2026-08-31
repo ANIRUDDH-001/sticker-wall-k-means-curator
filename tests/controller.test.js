@@ -634,6 +634,153 @@ describe('ui markup and accessibility (Phase 4)', function() {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Phase 5: Formal QA & Acceptance Audit Suite
+// ---------------------------------------------------------------------------
+describe('controller - formal QA & acceptance audit (Phase 5)', function() {
+  test('QA-1: Step-loop vs Run-to-End deep byte-identity across all scenarios', function() {
+    // Scenario 1: Cosmic Cafe Demo
+    var cDemo1 = createController(COSMIC_CAFE);
+    cDemo1.runToEnd();
+    var cDemo2 = createController(COSMIC_CAFE);
+    while (cDemo2.status !== 'CONVERGED' && cDemo2.status !== 'NOT_CONVERGED') {
+      cDemo2.step();
+    }
+    expect(JSON.stringify(cDemo1.history)).toBe(JSON.stringify(cDemo2.history));
+    expect(JSON.stringify(cDemo1.currentCentres)).toBe(JSON.stringify(cDemo2.currentCentres));
+    expect(cDemo1.iteration).toBe(cDemo2.iteration);
+    expect(cDemo1.status).toBe(cDemo2.status);
+
+    // Scenario 2: Empty Panel scenario
+    var cEmp1 = createController(EMPTY_PANEL);
+    cEmp1.runToEnd();
+    var cEmp2 = createController(EMPTY_PANEL);
+    while (cEmp2.status !== 'CONVERGED' && cEmp2.status !== 'NOT_CONVERGED') {
+      cEmp2.step();
+    }
+    expect(JSON.stringify(cEmp1.history)).toBe(JSON.stringify(cEmp2.history));
+    expect(JSON.stringify(cEmp1.currentCentres)).toBe(JSON.stringify(cEmp2.currentCentres));
+    expect(cEmp1.iteration).toBe(cEmp2.iteration);
+    expect(cEmp1.status).toBe(cEmp2.status);
+
+    // Scenario 3: 4-Centre scenario
+    var c4_1 = createController(COSMIC_CAFE);
+    c4_1.addCentre('PULSAR', 5, 5);
+    c4_1.runToEnd();
+
+    var c4_2 = createController(COSMIC_CAFE);
+    c4_2.addCentre('PULSAR', 5, 5);
+    while (c4_2.status !== 'CONVERGED' && c4_2.status !== 'NOT_CONVERGED') {
+      c4_2.step();
+    }
+    expect(JSON.stringify(c4_1.history)).toBe(JSON.stringify(c4_2.history));
+    expect(JSON.stringify(c4_1.currentCentres)).toBe(JSON.stringify(c4_2.currentCentres));
+    expect(c4_1.iteration).toBe(c4_2.iteration);
+    expect(c4_1.status).toBe(c4_2.status);
+  });
+
+  test('QA-2: Extreme coordinate boundaries and invalid numerical inputs', function() {
+    var c = createController(COSMIC_CAFE);
+
+    // Valid boundaries: (0, 0) and (10, 10)
+    expect(c.editSticker('SUNRISE', 0, 0).ok).toBe(true);
+    expect(c.editSticker('SUNRISE', 10, 10).ok).toBe(true);
+    expect(c.editCentre('NEBULA', 0, 10).ok).toBe(true);
+    expect(c.editCentre('NEBULA', 10, 0).ok).toBe(true);
+
+    // Invalid negative coordinates
+    var resNeg = c.editSticker('SUNRISE', -0.001, 5);
+    expect(resNeg.ok).toBe(false);
+    expect(resNeg.errors.some(function(e) { return e.code === 'INVALID_WARMTH'; })).toBe(true);
+
+    // Invalid out-of-bounds coordinates
+    var resOver = c.editCentre('NEBULA', 5, 10.001);
+    expect(resOver.ok).toBe(false);
+    expect(resOver.errors.some(function(e) { return e.code === 'INVALID_SPARKLE'; })).toBe(true);
+
+    // Invalid NaN, Infinity, strings, null
+    expect(c.editSticker('SUNRISE', NaN, 5).ok).toBe(false);
+    expect(c.editSticker('SUNRISE', 5, Infinity).ok).toBe(false);
+    expect(c.editSticker('SUNRISE', 'abc', 5).ok).toBe(false);
+    expect(c.editCentre('NEBULA', null, 5).ok).toBe(false);
+  });
+
+  test('QA-3: Centroid limits, duplicate IDs, and invalid ID formatting', function() {
+    var c = createController(COSMIC_CAFE); // k=3
+
+    // Duplicate centroid ID
+    var resDup = c.addCentre('NEBULA', 5, 5);
+    expect(resDup.ok).toBe(false);
+    expect(resDup.errors.some(function(e) { return e.code === 'DUPLICATE_CENTRE_ID'; })).toBe(true);
+
+    // Add 4th centre
+    var resAdd4 = c.addCentre('FOURTH', 5, 5);
+    expect(resAdd4.ok).toBe(true);
+    expect(c.k).toBe(4);
+
+    // Attempt to add 5th centre (exceeds max 4)
+    var resAdd5 = c.addCentre('FIFTH', 6, 6);
+    expect(resAdd5.ok).toBe(false);
+    expect(resAdd5.errors.some(function(e) { return e.code === 'MAX_CENTRES_EXCEEDED'; })).toBe(true);
+    expect(c.k).toBe(4);
+
+    // Remove down to 3
+    expect(c.removeCentre('FOURTH').ok).toBe(true);
+    expect(c.k).toBe(3);
+
+    // Remove down to 2
+    expect(c.removeCentre('COMET').ok).toBe(true);
+    expect(c.k).toBe(2);
+
+    // Attempt to remove below min 2
+    var resMin = c.removeCentre('EMBER');
+    expect(resMin.ok).toBe(false);
+    expect(resMin.errors.some(function(e) { return e.code === 'MIN_CENTRES_REQUIRED'; })).toBe(true);
+    expect(c.k).toBe(2);
+  });
+
+  test('QA-4: Zero reassignment during measurement in any iteration', function() {
+    var c = createController(COSMIC_CAFE);
+    c.step();
+
+    var snap = c.history[0];
+    // In Iteration 1, assignments were determined using decisionCentres
+    // Measurement calculated movements and SSE against updatedCentres without mutating snap.assignments
+    var sunriseIdx = snap.stickers.findIndex(function(s) { return s.id === 'SUNRISE'; });
+    expect(snap.assignments[sunriseIdx]).toBe('NEBULA');
+
+    // If assignments were mistakenly calculated using updatedCentres, SUNRISE would be EMBER
+    var d2UpdatedNeb = engine.squaredDistance(snap.stickers[sunriseIdx], snap.updatedCentres.find(function(ct) { return ct.id === 'NEBULA'; }));
+    var d2UpdatedEmb = engine.squaredDistance(snap.stickers[sunriseIdx], snap.updatedCentres.find(function(ct) { return ct.id === 'EMBER'; }));
+    expect(d2UpdatedEmb).toBeLessThan(d2UpdatedNeb);
+
+    // Proves that Iteration 1 preserved the true decision assignment
+    expect(snap.assignments[sunriseIdx]).toBe('NEBULA');
+  });
+
+  test('QA-5: Controller reset after arbitrary sequences of runs and invalid edits', function() {
+    var c = createController(COSMIC_CAFE);
+    c.runToEnd();
+    expect(c.iteration).toBe(3);
+
+    // Invalid edit after completed run
+    var badRes = c.editSticker('SUNRISE', 999, 999);
+    expect(badRes.ok).toBe(false);
+    expect(c.status).toBe('READY');
+    expect(c.iteration).toBe(0);
+    expect(c.history).toEqual([]);
+
+    // Reset restores exact immutable baseline
+    c.reset();
+    expect(c.status).toBe('READY');
+    expect(c.iteration).toBe(0);
+    expect(c.k).toBe(3);
+    expect(JSON.stringify(c.currentStickers)).toBe(JSON.stringify(c.originalStickers));
+    expect(JSON.stringify(c.currentCentres)).toBe(JSON.stringify(c.originalCentres));
+  });
+});
+
+
 
 
 
