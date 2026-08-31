@@ -65,11 +65,44 @@
   </div>
 
   <div class="right-panel">
-    <div class="status-box">
-      <div>Iteration: <strong id="elIter">0</strong> / 20</div>
-      <div>Status: <span id="elStatus" class="status-pill sp-ready">READY</span></div>
-      <div>Total SSE: <span id="elSSE">&mdash;</span></div>
+    <!-- Iteration Replay Timeline -->
+    <div class="timeline-box" id="timelineBox">
+      <div class="timeline-header">
+        <strong>Timeline / Replay:</strong>
+        <span id="timelineNotice" class="timeline-notice"></span>
+      </div>
+      <div class="timeline-pills" id="timelinePills">
+        <span class="tp-pill active">Iter 0 (Initial)</span>
+      </div>
     </div>
+
+    <!-- Status & SSE Metrics -->
+    <div class="status-box">
+      <div class="status-row">
+        <div>Iteration: <strong id="elIter">0</strong> / 20</div>
+        <div>Status: <span id="elStatus" class="status-pill sp-ready">READY</span></div>
+      </div>
+      <div class="status-row">
+        <div>Total SSE: <strong id="elSSE">&mdash;</strong> <span id="elSSETrend" class="sse-trend"></span></div>
+      </div>
+    </div>
+
+    <!-- 4-Stage Flow: Assign -> Update -> Measure -> Check -->
+    <div class="stage-box" id="stageBox">
+      <div class="stage-flow">
+        <span class="stage-step" id="stAssign"><span class="sn">1</span> Assign</span>
+        <span class="stage-arr">&rarr;</span>
+        <span class="stage-step" id="stUpdate"><span class="sn">2</span> Update</span>
+        <span class="stage-arr">&rarr;</span>
+        <span class="stage-step" id="stMeasure"><span class="sn">3</span> Measure</span>
+        <span class="stage-arr">&rarr;</span>
+        <span class="stage-step" id="stCheck"><span class="sn">4</span> Check</span>
+      </div>
+      <div class="stage-desc" id="stageDesc">
+        <em>Click Step or Run to advance through K-Means iterations.</em>
+      </div>
+    </div>
+
     <div class="panel-cards" id="panelCards">
       <em style="color:#6b7280;font-size:13px">Load Demo to begin.</em>
     </div>

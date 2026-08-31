@@ -489,4 +489,102 @@ describe('controller - centroid editing and dynamic management (Phase 2)', funct
   });
 });
 
+// ---------------------------------------------------------------------------
+// Phase 3: Mathematical Truth, Decision Centres vs Updated Centres, & Replay
+// ---------------------------------------------------------------------------
+describe('controller - mathematical truth and history separation (Phase 3)', function() {
+  test('P3-1: history entries record inputCentres / decisionCentres distinct from updatedCentres', function() {
+    var c = createController(COSMIC_CAFE);
+    c.step();
+
+    var snap = c.history[0];
+    expect(snap.inputCentres).toBeDefined();
+    expect(snap.decisionCentres).toBeDefined();
+    expect(snap.updatedCentres).toBeDefined();
+    expect(snap.stickers).toBeDefined();
+    expect(snap.stages).toBeDefined();
+    expect(snap.stages.length).toBe(4);
+
+    // Iteration 1 decision centres must be the initial centres
+    expect(snap.decisionCentres).toEqual(c.originalCentres);
+
+    // Updated centres must be different from initial decision centres
+    expect(snap.updatedCentres).not.toEqual(snap.decisionCentres);
+
+    // NEBULA decision centre was (2, 2); updated centre is (2.5, 2.375)
+    var nebDecision = snap.decisionCentres.find(function(ct) { return ct.id === 'NEBULA'; });
+    var nebUpdated  = snap.updatedCentres.find(function(ct) { return ct.id === 'NEBULA'; });
+    expect(nebDecision.warmth).toBe(2);
+    expect(nebDecision.sparkle).toBe(2);
+    expect(nebUpdated.warmth).toBeCloseTo(2.5, 4);
+    expect(nebUpdated.sparkle).toBeCloseTo(2.375, 4);
+  });
+
+  test('P3-2: Cosmic Cafe Iteration 1 SUNRISE tie-break uses decision centres (2,2) and (8,5)', function() {
+    var c = createController(COSMIC_CAFE);
+    c.step();
+
+    var snap = c.history[0];
+    var sunrise = snap.stickers.find(function(s) { return s.id === 'SUNRISE'; });
+    expect(sunrise.warmth).toBe(5);
+    expect(sunrise.sparkle).toBe(3.5);
+
+    var neb = snap.decisionCentres.find(function(ct) { return ct.id === 'NEBULA'; });
+    var ember = snap.decisionCentres.find(function(ct) { return ct.id === 'EMBER'; });
+    var comet = snap.decisionCentres.find(function(ct) { return ct.id === 'COMET'; });
+
+    var d2Neb = engine.squaredDistance(sunrise, neb);
+    var d2Ember = engine.squaredDistance(sunrise, ember);
+    var d2Comet = engine.squaredDistance(sunrise, comet);
+
+    // Both NEBULA and EMBER are exactly 11.250 away
+    expect(d2Neb).toBeCloseTo(11.25, 6);
+    expect(d2Ember).toBeCloseTo(11.25, 6);
+    expect(d2Comet).toBeCloseTo(29.25, 6);
+
+    // NEBULA is index 0, EMBER is index 2 -> NEBULA assigned by centre source order
+    var sunriseIdx = snap.stickers.findIndex(function(s) { return s.id === 'SUNRISE'; });
+    expect(snap.assignments[sunriseIdx]).toBe('NEBULA');
+  });
+
+  test('P3-3: Iteration 2 uses Iteration 1 updated centres as its decision centres', function() {
+    var c = createController(COSMIC_CAFE);
+    c.step(); // Iteration 1
+    c.step(); // Iteration 2
+
+    var snap1 = c.history[0];
+    var snap2 = c.history[1];
+
+    // Iteration 2's decision centres must match Iteration 1's updated centres
+    expect(snap2.decisionCentres).toEqual(snap1.updatedCentres);
+
+    // Iteration 2 SUNRISE is re-evaluated against Iteration 1 updated centres
+    var sunrise = snap2.stickers.find(function(s) { return s.id === 'SUNRISE'; });
+    var d2Neb2 = engine.squaredDistance(sunrise, snap2.decisionCentres.find(function(ct) { return ct.id === 'NEBULA'; }));
+    var d2Ember2 = engine.squaredDistance(sunrise, snap2.decisionCentres.find(function(ct) { return ct.id === 'EMBER'; }));
+
+    // In Iteration 2, SUNRISE is closer to EMBER than NEBULA
+    expect(d2Ember2).toBeLessThan(d2Neb2);
+    var sunriseIdx = snap2.stickers.findIndex(function(s) { return s.id === 'SUNRISE'; });
+    expect(snap2.assignments[sunriseIdx]).toBe('EMBER');
+  });
+
+  test('P3-4: Historical snapshots remain immutable during and after full run', function() {
+    var c = createController(COSMIC_CAFE);
+    c.runToEnd();
+
+    expect(c.history.length).toBe(3);
+    var snap1Copy = JSON.stringify(c.history[0]);
+    var snap2Copy = JSON.stringify(c.history[1]);
+    var snap3Copy = JSON.stringify(c.history[2]);
+
+    // Stepping again after convergence does nothing
+    c.step();
+    expect(JSON.stringify(c.history[0])).toBe(snap1Copy);
+    expect(JSON.stringify(c.history[1])).toBe(snap2Copy);
+    expect(JSON.stringify(c.history[2])).toBe(snap3Copy);
+  });
+});
+
+
 

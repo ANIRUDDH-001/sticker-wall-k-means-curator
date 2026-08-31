@@ -68,6 +68,9 @@ function createController(collection) {
 
     iteration += 1;
 
+    // Capture decision centres (pre-update input centres for assignment)
+    var decisionCentres = deepCopy(currentCentres);
+
     // Call through module reference so Jest spies intercept correctly.
     var result = engineModule.runIteration({ stickers: currentStickers, centres: currentCentres });
 
@@ -88,13 +91,23 @@ function createController(collection) {
     prevSignature = result.newSignature;
 
     history.push({
-      iteration:   iteration,
-      assignments: result.newAssignments.slice(),
-      centres:     deepCopy(result.newCentres),
-      sse:         result.sse,
-      movements:   deepCopy(result.movements),
-      signature:   result.newSignature,
-      status:      newStatus,
+      iteration:       iteration,
+      stickers:        deepCopy(currentStickers),
+      inputCentres:    deepCopy(decisionCentres),
+      decisionCentres: deepCopy(decisionCentres),
+      assignments:     result.newAssignments.slice(),
+      centres:         deepCopy(result.newCentres),
+      updatedCentres:  deepCopy(result.newCentres),
+      sse:             result.sse,
+      movements:       deepCopy(result.movements),
+      signature:       result.newSignature,
+      status:          newStatus,
+      stages: [
+        { stage: 1, name: 'Assign',  desc: 'Computed d² to decision centres; assigned each sticker to nearest centre (ties broken by centre source order).' },
+        { stage: 2, name: 'Update',  desc: 'Recomputed centroid (warmth, sparkle) as mean of assigned sticker coordinates (empty centres retained).' },
+        { stage: 3, name: 'Measure', desc: 'Measured centroid drift distances and total Sum of Squared Errors (SSE = ' + Number(result.sse).toFixed(3) + ').' },
+        { stage: 4, name: 'Check',   desc: converged ? 'Converged! Signature matched previous iteration.' : (iteration >= 20 ? 'Iteration limit (20) reached.' : 'Assignments changed; continue to next iteration.') }
+      ]
     });
   }
 

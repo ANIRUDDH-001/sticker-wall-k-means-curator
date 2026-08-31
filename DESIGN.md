@@ -56,11 +56,13 @@ createController(collection) **throws** on invalid input rather than returning a
 
 ## AI-influenced decisions
 
+- **Mathematical visualization truth (decision centres vs updated centres).** Assignment lines terminate at decision centres (`inputCentres` before update) rather than updated centres. A separate dashed drift arrow connects each decision centre to its updated centre position, making the 4 stages (Assign -> Update -> Measure -> Check) visually clear.
+- **Read-only historical timeline replay.** Replay scrubs through immutable history snapshots (`ctrl.history[i]`) allowing users to inspect past iterations without mutating the controller's active execution or baseline data.
 - **Three-tier state architecture (demo baseline -> working baseline -> active runState).** The immutable demo baseline (`originalStickers`, `originalCentres`) is deeply frozen and never mutated. The working baseline (`baselineStickers`, `baselineCentres`) stores the user's custom edits, added centres, or removed centres. The active run copies (`currentStickers`, `currentCentres`) execute the iterations. Reset always restores from the immutable demo baseline.
 - **Shared direct manipulation drag pipeline.** Canvas dragging converts pointer coordinates to clamped warmth/sparkle values and reuses the exact same `ctrl.editSticker` / `ctrl.editCentre` methods as the numeric inputs, preventing parallel editing logic bugs.
 - **Dynamic $k=2..4$ Centroid Management.** Centroids can be added, removed, or edited with live validation guarding $2 \le k \le 4$ and $k \le \text{sticker count}$. Legend and panel cards adapt dynamically to any active cluster configuration.
 - **Tolerance test split into 3a (0.5e-12, tied) and 3b (2e-12, not tied).** Enforced the strict `bestDistance - distance > EPS` pattern in the engine.
-- **Inspection distances use pre-update centres.** After Step 1, `controller.currentCentres` holds the *updated* centres. But the inspection panel shows the distances that *drove* the assignment — the centres before the update.
+- **Inspection distances use pre-update decision centres.** The inspection panel shows the distances that *drove* the assignment — the centres before the update — with full source-order tie-break explanation.
 - **Lossless signature encoding (`JSON.stringify`).** Lossless JSON serialization prevents delimiter collisions for arbitrary IDs.
 - **Invalid edit state isolation.** An invalid coordinate edit visibly fails and resets any stale active run state (`iteration = 0`, `status = 'READY'`, `history = []`) without corrupting baseline data.
 - **Live modification prep ranked by rehearsal safety, not likelihood.** Highlighted in `01_IMPLEMENTATION_PLAN.md` §7.
