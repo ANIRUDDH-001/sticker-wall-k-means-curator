@@ -12,7 +12,9 @@
 <!-- Header Bar: Title + Scenario + Run Controls -->
 <header class="app-header">
   <div class="header-brand">
-    <div class="brand-icon">&#10024;</div>
+    <div class="brand-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+    </div>
     <div class="brand-text">
       <h1 class="brand-title">Cosmic Cafe Observatory</h1>
       <span class="brand-subtitle">Sticker Wall K-Means Curator &middot; CC63 &middot; SPR26_D2_P02</span>
@@ -36,19 +38,25 @@
 
     <div class="toolbar-group">
       <button id="btnStep" class="btn-action" disabled title="Step one K-Means iteration">
-        <span class="btn-icon">&#9654;</span> Step
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" class="lucide lucide-play"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+        <span>Step</span>
       </button>
       <button id="btnRun" class="btn-action" disabled title="Run all iterations until convergence">
-        <span class="btn-icon">&#9197;</span> Run to End
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none" class="lucide lucide-fast-forward"><polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/></svg>
+        <span>Run to End</span>
       </button>
       <button id="btnReset" class="btn-secondary" disabled title="Reset back to original immutable demo">
-        <span class="btn-icon">&#8634;</span> Reset
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-ccw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        <span>Reset</span>
       </button>
     </div>
   </div>
 
   <div class="header-actions">
-    <button id="btnFullscreen" class="btn-ghost" title="Toggle Fullscreen Mode">&#x26F6; Full Screen</button>
+    <button id="btnFullscreen" class="btn-ghost" title="Toggle Fullscreen Mode">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize-2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>
+      <span>Full Screen</span>
+    </button>
   </div>
 </header>
 
@@ -106,7 +114,9 @@
     <!-- 3: Current Key Event -->
     <div class="event-card" id="eventCard">
       <div class="event-header">
-        <span class="event-icon">&#128269;</span>
+        <span class="event-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-activity"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </span>
         <strong id="eventTitle" class="event-title">Baseline Initialized</strong>
       </div>
       <div id="eventDetail" class="event-detail">
@@ -132,7 +142,10 @@
 
     <!-- 5: Sticker Inspector Matrix -->
     <div class="inspector-card">
-      <h3 class="inspector-title">&#127919; Sticker Inspector</h3>
+      <div class="card-heading-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-crosshair"><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="6"/><line x1="12" x2="12" y1="18" y2="22"/></svg>
+        <h3 class="inspector-title">Sticker Inspector</h3>
+      </div>
       <div id="inspection" class="inspector-body">
         <div class="inspector-placeholder">Click any sticker on the map to inspect squared distances (d&sup2;) and tie-break reasoning.</div>
       </div>
@@ -140,7 +153,10 @@
 
     <!-- 6: Compact Cluster Summary -->
     <div class="clusters-card">
-      <h3 class="inspector-title">&#128202; Cluster Summary</h3>
+      <div class="card-heading-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layers"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 12.5-8.58 3.91a2 2 0 0 1-1.66 0L2 12.5"/><path d="m22 17.5-8.58 3.91a2 2 0 0 1-1.66 0L2 17.5"/></svg>
+        <h3 class="inspector-title">Cluster Summary</h3>
+      </div>
       <div class="rail-clusters" id="panelCards">
         <em style="color:#94a3b8;font-size:11px">Load Demo to begin.</em>
       </div>
@@ -152,7 +168,10 @@
 <footer class="bottom-rail">
   <!-- Left: Timeline Replay -->
   <div class="rail-timeline" id="timelineBox" aria-label="Algorithm Timeline">
-    <strong class="timeline-title">&#128337; Timeline:</strong>
+    <div class="rail-meta-title">
+      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+      <strong class="timeline-title">Timeline:</strong>
+    </div>
     <span id="timelineNotice" class="timeline-notice"></span>
     <div class="timeline-pills" id="timelinePills" role="tablist">
       <button class="tp-pill active" role="tab" aria-selected="true">Iter 0 (Initial)</button>
@@ -164,7 +183,10 @@
   <!-- Center: Compact Contextual Edit / Data Strip -->
   <div class="rail-editor">
     <div class="editor-subgroup" id="stickerEditorCard">
-      <span class="rail-badge">&#9998; Sticker:</span>
+      <span class="rail-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-tag"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+        Sticker:
+      </span>
       <select id="selSticker"><option value="">— load —</option></select>
       <label class="rail-field"><span>W:</span><input type="number" id="inpW" min="0" max="10" step="0.1" disabled></label>
       <label class="rail-field"><span>S:</span><input type="number" id="inpS" min="0" max="10" step="0.1" disabled></label>
@@ -176,7 +198,10 @@
     <div class="rail-divider-sub"></div>
 
     <div class="editor-subgroup" id="centreEditorCard">
-      <span class="rail-badge">&#128205; Centroid:</span>
+      <span class="rail-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+        Centroid:
+      </span>
       <select id="selCentre"><option value="">— load —</option></select>
       <label class="rail-field"><span>W:</span><input type="number" id="inpCW" min="0" max="10" step="0.1" disabled></label>
       <label class="rail-field"><span>S:</span><input type="number" id="inpCS" min="0" max="10" step="0.1" disabled></label>
@@ -201,7 +226,10 @@
 <!-- Modals for Add Sticker / Add Centroid -->
 <div id="modalAddSticker" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="titleAddSticker">
   <div class="modal-dialog">
-    <h3 id="titleAddSticker" class="modal-title">&#9733; Add New Sticker</h3>
+    <div class="card-heading-row" style="margin-bottom:12px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-tag"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+      <h3 id="titleAddSticker" class="modal-title" style="margin-bottom:0;">Add New Sticker</h3>
+    </div>
     <form id="formAddSticker" class="modal-form" onsubmit="return false;">
       <label class="modal-field">
         <span>Sticker ID:</span>
@@ -225,7 +253,10 @@
 
 <div id="modalAddCentre" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="titleAddCentre">
   <div class="modal-dialog">
-    <h3 id="titleAddCentre" class="modal-title">&#128205; Add New Centroid (Max k=4)</h3>
+    <div class="card-heading-row" style="margin-bottom:12px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+      <h3 id="titleAddCentre" class="modal-title" style="margin-bottom:0;">Add New Centroid (Max k=4)</h3>
+    </div>
     <form id="formAddCentre" class="modal-form" onsubmit="return false;">
       <label class="modal-field">
         <span>Centroid ID:</span>
