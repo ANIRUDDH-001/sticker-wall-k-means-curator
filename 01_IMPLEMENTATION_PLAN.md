@@ -1,4 +1,4 @@
-﻿# Implementation Plan — Sticker Wall K-Means Curator
+# Implementation Plan — Sticker Wall K-Means Curator
 **Problem:** SPR26_D2_P02 · **Candidate Code:** CC63 · **Interview:** Sep 1 2026, 08:00 IST
 
 ---
@@ -238,13 +238,11 @@ Likely 10-minute asks the interviewer might frame as a "user request." My workfl
 
 *To be filled during implementation. Format:*
 
-- **Step 2:** implemented as planned
-- **Step 3:** implemented as planned
-- **Step 4:** implemented as planned - Canvas 500x500, shape+colour+text legend, assignment lines, initial-centre X / current-centre star glyphs, panel cards with empty-panel retention text, inspection distances against pre-update assignment centres (required for iter-1 tie note); 43 tests still green. - createController factory with deepFreeze originals, step/runToEnd sharing one code path, editSticker/reset semantics, 20-iter cap; all 43 tests green including full Cosmic Cafe and empty-panel oracle reproduction. — engine.js has 8 functions, zero DOM refs, dual CJS/window export; all 20 Jest tests green including PS built-in example integration test.
-
-- **Step X:** *what I changed* — *why* — *what I verified after*
-
-Example: *Step 4 — Moved sticker inspection from a modal to an always-visible panel — modal blocked view of the map during the demo — verified all inspection outputs still match the oracle distances.*
+- **Step 2:** implemented as planned — engine.js has 8 functions, zero DOM refs, dual CJS/window export; all 20 Jest tests green including PS built-in example integration test.
+- **Step 3:** implemented as planned — createController factory with deepFreeze originals, step/runToEnd sharing one code path, editSticker/reset semantics, 20-iter cap; all 43 tests green including full Cosmic Cafe and empty-panel oracle reproduction.
+- **Step 4:** implemented as planned — Canvas 500x500, shape+colour+text legend, assignment lines, initial-centre X / current-centre star glyphs, panel cards with empty-panel retention text, inspection distances against pre-update assignment centres (required for iter-1 tie note); 43 tests still green.
+- **Step 5:** implemented as planned — full test coverage audit (T1-T19 verified), test T20 (validation clearing) added, all 45 tests green, clean-clone install verified, README/PROMPTS/DESIGN deliverable docs generated.
+- All 5 steps complete. Ready for interview.
 
 ---
 
@@ -257,6 +255,7 @@ Example: *Step 4 — Moved sticker inspection from a modal to an always-visible 
 | First-iteration tie disappears when I adjust coordinates | Lock the tied sticker's position first; design other stickers around it |
 | Live modification breaks a passing test | Run `npm test` before saying "done" during the live change; if red, restate what broke and either fix or revert |
 | Canvas hit-testing for sticker clicks is fiddly | Store sticker screen coords after each draw; click handler does linear scan (10 stickers, negligible) |
+
 
 
 
