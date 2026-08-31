@@ -1,0 +1,244 @@
+﻿'use strict';
+
+const { createController } = require('../js/controller.js');
+const { COSMIC_CAFE }  = require('../data/demo.js');
+const { EMPTY_PANEL }  = require('../data/emptyPanel.js');
+const engine           = require('../js/engine.js');
+
+// ---------------------------------------------------------------------------
+// Test 10: 20-iteration cap
+// The spy makes isConverged() always return false so runToEnd() must halt
+// by hitting the 20-iteration ceiling, not by converging.
+// ---------------------------------------------------------------------------
+describe('controller - 20-iteration cap (test 10)', function() {
+  test('10 - runToEnd caps at iteration 20, status NOT_CONVERGED, history.length 20', function() {
+    var spy = jest.spyOn(engine, 'isConverged').mockReturnValue(false);
+    try {
+      var c = createController(COSMIC_CAFE);
+      c.runToEnd();
+      expect(c.iteration).toBe(20);
+      expect(c.status).toBe('NOT_CONVERGED');
+      expect(c.history.length).toBe(20);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 15: editSticker semantics
+// ---------------------------------------------------------------------------
+describe('controller - editSticker (test 15)', function() {
+  test('15 - edit clears history, resets iteration, restores centres; original unchanged', function() {
+    var c = createController(COSMIC_CAFE);
+
+    // Run one iteration first to produce some state.
+    c.step();
+    expect(c.history.length).toBe(1);
+
+    var result = c.editSticker('SUNRISE', 0, 3.5);
+    expect(result.ok).toBe(true);
+
+    // State reset
+    expect(c.history).toEqual([]);
+    expect(c.iteration).toBe(0);
+    expect(c.status).toBe('READY');
+
+    // currentCentres deep-equals originalCentres
+    expect(JSON.stringify(c.currentCentres)).toBe(JSON.stringify(c.originalCentres));
+
+    // originalStickers[3] is SUNRISE with warmth still 5 (frozen, untouched)
+    expect(c.originalStickers[3].id).toBe('SUNRISE');
+    expect(c.originalStickers[3].warmth).toBe(5);
+
+    // currentStickers[3].warmth is now 0 (the edit)
+    expect(c.currentStickers[3].id).toBe('SUNRISE');
+    expect(c.currentStickers[3].warmth).toBe(0);
+    expect(c.currentStickers[3].sparkle).toBe(3.5);
+  });
+
+  test('15b - editSticker with invalid coords returns ok:false, no state mutation', function() {
+    var c = createController(COSMIC_CAFE);
+    c.step();
+    var iterBefore = c.iteration;
+
+    var result = c.editSticker('SUNRISE', -1, 5);
+    expect(result.ok).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+
+    // State must NOT have been mutated
+    expect(c.iteration).toBe(iterBefore);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 16: reset semantics
+// ---------------------------------------------------------------------------
+describe('controller - reset (test 16)', function() {
+  test('16 - reset restores original stickers and centres, clears all state', function() {
+    var c = createController(COSMIC_CAFE);
+    c.runToEnd();
+    expect(c.history.length).toBeGreaterThan(0);
+
+    c.reset();
+
+    expect(JSON.stringify(c.currentStickers)).toBe(JSON.stringify(c.originalStickers));
+    expect(JSON.stringify(c.currentCentres)).toBe(JSON.stringify(c.originalCentres));
+    expect(c.history).toEqual([]);
+    expect(c.iteration).toBe(0);
+    expect(c.status).toBe('READY');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 17: Main oracle end-to-end - Cosmic Cafe
+// Every value below must match oracle.md §4-5 exactly (within float tolerance).
+// ---------------------------------------------------------------------------
+describe('controller - Cosmic Cafe oracle end-to-end (test 17)', function() {
+  var c17;
+
+  beforeAll(function() {
+    c17 = createController(COSMIC_CAFE);
+    c17.runToEnd();
+  });
+
+  test('17a - converges in exactly 3 iterations with status CONVERGED', function() {
+    expect(c17.iteration).toBe(3);
+    expect(c17.status).toBe('CONVERGED');
+    expect(c17.history.length).toBe(3);
+  });
+
+  test('17b - iter-1 SSE = 19.354167', function() {
+    expect(c17.history[0].sse).toBeCloseTo(19.354167, 3);
+  });
+
+  test('17c - iter-2 SSE = 11.104167', function() {
+    expect(c17.history[1].sse).toBeCloseTo(11.104167, 3);
+  });
+
+  test('17d - iter-3 SSE = 11.104167 (unchanged from iter 2, converged)', function() {
+    expect(c17.history[2].sse).toBeCloseTo(11.104167, 3);
+  });
+
+  test('17e - iter-1 NEBULA centre = (2.5, 2.375)', function() {
+    var neb = c17.history[0].centres.find(function(x) { return x.id === 'NEBULA'; });
+    expect(neb.warmth).toBeCloseTo(2.5, 5);
+    expect(neb.sparkle).toBeCloseTo(2.375, 5);
+  });
+
+  test('17f - iter-1 EMBER centre = (6.5, 3.833333)', function() {
+    var emb = c17.history[0].centres.find(function(x) { return x.id === 'EMBER'; });
+    expect(emb.warmth).toBeCloseTo(6.5, 5);
+    expect(emb.sparkle).toBeCloseTo(3.8333, 3);
+  });
+
+  test('17g - iter-2 NEBULA centre = (1.666667, 2)', function() {
+    var neb = c17.history[1].centres.find(function(x) { return x.id === 'NEBULA'; });
+    expect(neb.warmth).toBeCloseTo(1.6667, 3);
+    expect(neb.sparkle).toBeCloseTo(2, 5);
+  });
+
+  test('17h - iter-2 EMBER centre = (6.125, 3.75)', function() {
+    var emb = c17.history[1].centres.find(function(x) { return x.id === 'EMBER'; });
+    expect(emb.warmth).toBeCloseTo(6.125, 5);
+    expect(emb.sparkle).toBeCloseTo(3.75, 5);
+  });
+
+  test('17i - iter-3 centres are identical to iter-2 (members unchanged)', function() {
+    var s2 = JSON.stringify(c17.history[1].centres);
+    var s3 = JSON.stringify(c17.history[2].centres);
+    expect(s3).toBe(s2);
+  });
+
+  test('17j - iter-1: SUNRISE (index 3) assigned to NEBULA (tie, source order)', function() {
+    expect(c17.history[0].assignments[3]).toBe('NEBULA');
+  });
+
+  test('17k - iter-2: SUNRISE (index 3) assigned to EMBER (reassignment)', function() {
+    expect(c17.history[1].assignments[3]).toBe('EMBER');
+  });
+
+  test('17l - iter-1 movements: NEBULA=0.625, COMET=0, EMBER~=1.9003', function() {
+    var mov = c17.history[0].movements;
+    expect(mov['NEBULA']).toBeCloseTo(0.625, 5);
+    expect(mov['COMET']).toBeCloseTo(0, 10);
+    expect(mov['EMBER']).toBeCloseTo(1.9003, 3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 18: Empty-panel oracle
+// EXILE gets zero assignments in every iteration; coords must stay (9,9) exactly.
+// ---------------------------------------------------------------------------
+describe('controller - empty-panel oracle (test 18)', function() {
+  var c18;
+
+  beforeAll(function() {
+    c18 = createController(EMPTY_PANEL);
+    c18.runToEnd();
+  });
+
+  test('18a - converges in exactly 2 iterations', function() {
+    expect(c18.iteration).toBe(2);
+    expect(c18.status).toBe('CONVERGED');
+    expect(c18.history.length).toBe(2);
+  });
+
+  test('18b - EXILE centre coords are (9, 9) exactly in every iteration', function() {
+    c18.history.forEach(function(snap) {
+      var exile = snap.centres.find(function(x) { return x.id === 'EXILE'; });
+      expect(exile.warmth).toBe(9);
+      expect(exile.sparkle).toBe(9);
+    });
+  });
+
+  test('18c - HOME centre after iter 1 = (2, 1.333333)', function() {
+    var home = c18.history[0].centres.find(function(x) { return x.id === 'HOME'; });
+    expect(home.warmth).toBeCloseTo(2, 5);
+    expect(home.sparkle).toBeCloseTo(1.3333, 3);
+  });
+
+  test('18d - all three stickers assigned to HOME in every iteration', function() {
+    c18.history.forEach(function(snap) {
+      expect(snap.assignments).toEqual(['HOME', 'HOME', 'HOME']);
+    });
+  });
+
+  test('18e - EXILE movement is exactly 0 in every iteration', function() {
+    c18.history.forEach(function(snap) {
+      expect(snap.movements['EXILE']).toBe(0);
+    });
+  });
+
+  test('18f - no NaN or Infinity anywhere in history', function() {
+    function containsNonFinite(val) {
+      if (typeof val === 'number') return !Number.isFinite(val);
+      if (Array.isArray(val)) return val.some(containsNonFinite);
+      if (val && typeof val === 'object') return Object.values(val).some(containsNonFinite);
+      return false;
+    }
+    expect(containsNonFinite(c18.history)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 19: step-loop vs runToEnd produce byte-identical history (contract-critical)
+// Proves the SAME code path is used for both - no separate iteration logic.
+// ---------------------------------------------------------------------------
+describe('controller - step-loop vs runToEnd identity (test 19)', function() {
+  test('19 - JSON.stringify(step-loop history) === JSON.stringify(runToEnd history)', function() {
+    // Path A: runToEnd
+    var c1 = createController(COSMIC_CAFE);
+    c1.runToEnd();
+    var history1 = c1.history;
+
+    // Path B: manual step loop (mirrors runToEnd's while condition exactly)
+    var c2 = createController(COSMIC_CAFE);
+    while (c2.status !== 'CONVERGED' && c2.status !== 'NOT_CONVERGED') {
+      c2.step();
+    }
+    var history2 = c2.history;
+
+    expect(JSON.stringify(history1)).toBe(JSON.stringify(history2));
+  });
+});

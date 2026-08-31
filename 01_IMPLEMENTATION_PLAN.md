@@ -238,7 +238,8 @@ Likely 10-minute asks the interviewer might frame as a "user request." My workfl
 
 *To be filled during implementation. Format:*
 
-- **Step 2:** implemented as planned — engine.js has 8 functions, zero DOM refs, dual CJS/window export; all 20 Jest tests green including PS built-in example integration test.
+- **Step 2:** implemented as planned
+- **Step 3:** implemented as planned - createController factory with deepFreeze originals, step/runToEnd sharing one code path, editSticker/reset semantics, 20-iter cap; all 43 tests green including full Cosmic Cafe and empty-panel oracle reproduction. — engine.js has 8 functions, zero DOM refs, dual CJS/window export; all 20 Jest tests green including PS built-in example integration test.
 
 - **Step X:** *what I changed* — *why* — *what I verified after*
 
@@ -255,4 +256,5 @@ Example: *Step 4 — Moved sticker inspection from a modal to an always-visible 
 | First-iteration tie disappears when I adjust coordinates | Lock the tied sticker's position first; design other stickers around it |
 | Live modification breaks a passing test | Run `npm test` before saying "done" during the live change; if red, restate what broke and either fix or revert |
 | Canvas hit-testing for sticker clicks is fiddly | Store sticker screen coords after each draw; click handler does linear scan (10 stickers, negligible) |
+
 
