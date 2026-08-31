@@ -3,28 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sticker Wall K-Means Curator · Cosmic Cafe</title>
+  <title>Cosmic Cafe Observatory · Sticker Wall K-Means Curator</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="cosmic-theme">
+<body class="cosmic-theme single-screen-layout">
 
+<!-- Header Strip -->
 <header class="app-header">
   <div class="header-brand">
     <div class="brand-icon">&#10024;</div>
     <div>
-      <h1 class="brand-title">Sticker Wall K-Means Curator</h1>
-      <div class="brand-subtitle">Cosmic Cafe Edition &middot; Candidate CC63 &middot; SPR26_D2_P02</div>
+      <h1 class="brand-title">Cosmic Cafe Observatory</h1>
+      <div class="brand-subtitle">Sticker Wall K-Means Curator &middot; Candidate CC63 &middot; SPR26_D2_P02</div>
     </div>
   </div>
-  <div class="header-actions">
-    <button id="btnFullscreen" class="btn-ghost" title="Toggle Fullscreen Mode">&#x26F6; Full Screen</button>
-  </div>
-</header>
 
-<main class="app-container">
-  <!-- Top Action & Scenario Bar -->
-  <section class="toolbar-section">
+  <!-- Primary Controls in Header -->
+  <div class="toolbar-section">
     <div class="toolbar-group">
       <label class="ctrl-label" for="selScenario">
         <span class="label-badge">Scenario</span>
@@ -49,163 +45,150 @@
         <span class="btn-icon">&#8634;</span> Reset
       </button>
     </div>
-  </section>
+  </div>
 
-  <!-- Error / Validation Banner -->
-  <div id="banner" class="banner hidden" role="alert" aria-live="assertive"></div>
+  <div class="header-actions">
+    <button id="btnFullscreen" class="btn-ghost" title="Toggle Fullscreen Mode">&#x26F6; Full Screen</button>
+  </div>
+</header>
 
-  <!-- Replay Timeline -->
-  <section id="timelineBox" class="timeline-section" aria-label="Algorithm Timeline">
-    <div class="timeline-meta">
-      <strong class="timeline-title">&#128337; Timeline &amp; Replay</strong>
-      <span id="timelineNotice" class="timeline-notice"></span>
-    </div>
-    <div class="timeline-pills" id="timelinePills" role="tablist">
-      <button class="tp-pill active" role="tab" aria-selected="true">Iter 0 (Initial)</button>
-    </div>
-  </section>
+<!-- Error / Validation Banner -->
+<div id="banner" class="banner hidden" role="alert" aria-live="assertive"></div>
 
-  <!-- Main Grid Workspace -->
-  <div class="workspace-grid">
-    <!-- Left / Center: Canvas Map -->
+<!-- Horizontal Timeline Bar -->
+<section id="timelineBox" class="timeline-bar" aria-label="Algorithm Timeline">
+  <div class="timeline-meta">
+    <strong class="timeline-title">&#128337; Timeline &amp; Replay</strong>
+    <span id="timelineNotice" class="timeline-notice"></span>
+  </div>
+  <div class="timeline-pills" id="timelinePills" role="tablist">
+    <button class="tp-pill active" role="tab" aria-selected="true">Iter 0 (Initial)</button>
+  </div>
+</section>
+
+<!-- Main Single-Screen Workspace -->
+<main class="app-workspace">
+  <!-- Left Side: Interactive 2D Map (65%) -->
+  <section class="map-pane">
     <div class="map-card">
       <div class="map-header">
         <h2 class="section-title">2D Clustering Map (Warmth &times; Sparkle)</h2>
-        <div class="canvas-hint">Direct manipulation: drag any sticker (&#9679;/&#9651;/&#9632;/&#9670;) or centroid (&#9733;) on the map to modify coordinates. <span class="canvas-hint-note">Sticker coordinates remain fixed during K-Means iterations; only cluster assignments and centroids change.</span></div>
+        <div class="canvas-hint">Direct manipulation: drag any sticker (&#9679;/&#9651;/&#9632;/&#9670;) or centroid (&#9733;) on the map. <span class="canvas-hint-note">Sticker coordinates remain fixed during K-Means iterations; only cluster assignments and centroids change.</span></div>
       </div>
       <div class="canvas-container">
         <canvas id="mainCanvas" width="560" height="560" aria-label="Interactive 2D K-Means plot"></canvas>
       </div>
     </div>
 
-    <!-- Right: Metrics, Key Event, Stages, Inspector -->
-    <div class="sidebar-column">
-      <!-- Live Metrics Card -->
-      <div class="metric-card">
-        <div class="metric-grid">
-          <div class="metric-item">
-            <span class="metric-lbl">Iteration</span>
-            <strong id="elIter" class="metric-val">0</strong>
-            <span class="metric-sub">/ 20 cap</span>
-          </div>
-          <div class="metric-item">
-            <span class="metric-lbl">Status</span>
-            <span id="elStatus" class="status-pill sp-ready">READY</span>
-            <span id="elKBadge" class="metric-sub">k = 3</span>
-          </div>
-          <div class="metric-item metric-item-wide">
-            <span class="metric-lbl">Total SSE (Sum of Squared Errors)</span>
-            <div class="metric-sse-wrap">
-              <strong id="elSSE" class="metric-val">&mdash;</strong>
-              <span id="elSSETrend" class="sse-trend"></span>
-            </div>
-            <span class="metric-sub">Convergence: signature stability (not SSE threshold)</span>
-          </div>
+    <!-- Bottom Strip Under Map: Panel Summary & Editors -->
+    <div class="bottom-utility-strip">
+      <!-- Active Cluster Panel Cards Grid -->
+      <div class="panels-section">
+        <h3 class="subsection-title">Active Cluster Panels</h3>
+        <div class="panel-cards" id="panelCards">
+          <em style="color:#94a3b8;font-size:12px">Load Demo to begin.</em>
         </div>
       </div>
 
-      <!-- Key Event Card -->
-      <div class="event-card" id="eventCard">
-        <div class="event-header">
-          <span class="event-icon">&#128269;</span>
-          <strong id="eventTitle" class="event-title">Baseline Initialized</strong>
+      <!-- Editors Row -->
+      <div class="editors-row">
+        <!-- Sticker Editor -->
+        <div class="editor-box" id="stickerEditorCard">
+          <span class="editor-badge">&#9998; Sticker:</span>
+          <select id="selSticker"><option value="">— load demo —</option></select>
+          <label class="compact-field"><span>W:</span><input type="number" id="inpW" min="0" max="10" step="0.1" disabled></label>
+          <label class="compact-field"><span>S:</span><input type="number" id="inpS" min="0" max="10" step="0.1" disabled></label>
+          <button id="btnApply" class="btn-compact" disabled>Apply</button>
+          <button id="btnAddSticker" class="btn-compact-outline" disabled title="Add custom sticker">+ Add</button>
+          <button id="btnRemoveSticker" class="btn-compact-outline" disabled title="Remove selected sticker">&minus; Del</button>
         </div>
-        <div id="eventDetail" class="event-detail">
-          Cosmic Cafe dataset loaded. Step or Run to begin K-Means clustering.
-        </div>
-      </div>
 
-      <!-- 4-Stage Flow Card -->
-      <div class="stage-card" id="stageBox">
-        <div class="stage-flow-nav">
-          <span class="stage-step" id="stAssign"><span class="sn">1</span> Assign</span>
-          <span class="stage-arr">&rarr;</span>
-          <span class="stage-step" id="stUpdate"><span class="sn">2</span> Update</span>
-          <span class="stage-arr">&rarr;</span>
-          <span class="stage-step" id="stMeasure"><span class="sn">3</span> Measure</span>
-          <span class="stage-arr">&rarr;</span>
-          <span class="stage-step" id="stCheck"><span class="sn">4</span> Check</span>
-        </div>
-        <div class="stage-desc" id="stageDesc">
-          <em>Ready to start. Next Step will execute Stage 1 (Assign) against initial decision centres.</em>
+        <!-- Centroid Editor -->
+        <div class="editor-box" id="centreEditorCard">
+          <span class="editor-badge">&#128205; Centroid:</span>
+          <select id="selCentre"><option value="">— load demo —</option></select>
+          <label class="compact-field"><span>W:</span><input type="number" id="inpCW" min="0" max="10" step="0.1" disabled></label>
+          <label class="compact-field"><span>S:</span><input type="number" id="inpCS" min="0" max="10" step="0.1" disabled></label>
+          <button id="btnApplyCentre" class="btn-compact" disabled>Update</button>
+          <button id="btnAddCentre" class="btn-compact-outline" disabled title="Add a new centre (max k=4)">+ Add</button>
+          <button id="btnRemoveCentre" class="btn-compact-outline" disabled title="Remove selected centre (min k=2)">&minus; Del</button>
         </div>
       </div>
 
-      <!-- Sticker Inspector Card -->
-      <div class="inspector-card">
-        <h3 class="inspector-title">&#127919; Sticker Inspector</h3>
-        <div id="inspection" class="inspector-body">
-          <em>Click any sticker on the canvas to inspect squared distances (d&sup2;) and tie-break reasoning.</em>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bottom Workspace: Editors & Panel Cards -->
-  <div class="bottom-grid">
-    <!-- Sticker Editor -->
-    <div class="editor-card" id="stickerEditorCard">
-      <h3 class="editor-title">&#9998; Sticker Editor</h3>
-      <div class="editor-form">
-        <label class="form-field">
-          <span>Select:</span>
-          <select id="selSticker"><option value="">— load demo first —</option></select>
-        </label>
-        <label class="form-field">
-          <span>Warmth:</span>
-          <input type="number" id="inpW" min="0" max="10" step="0.1" disabled>
-        </label>
-        <label class="form-field">
-          <span>Sparkle:</span>
-          <input type="number" id="inpS" min="0" max="10" step="0.1" disabled>
-        </label>
-        <button id="btnApply" class="btn-secondary" disabled>Apply Coords</button>
-        <button id="btnAddSticker" class="btn-outline" disabled title="Add a new custom sticker">+ Add Sticker</button>
-        <button id="btnRemoveSticker" class="btn-outline" disabled title="Remove selected sticker">&minus; Remove</button>
-      </div>
-    </div>
-
-    <!-- Centroid Management -->
-    <div class="editor-card" id="centreEditorCard">
-      <h3 class="editor-title">&#128205; Centroid Management</h3>
-      <div class="editor-form">
-        <label class="form-field">
-          <span>Centroid:</span>
-          <select id="selCentre"><option value="">— load demo first —</option></select>
-        </label>
-        <label class="form-field">
-          <span>Warmth:</span>
-          <input type="number" id="inpCW" min="0" max="10" step="0.1" disabled>
-        </label>
-        <label class="form-field">
-          <span>Sparkle:</span>
-          <input type="number" id="inpCS" min="0" max="10" step="0.1" disabled>
-        </label>
-        <button id="btnApplyCentre" class="btn-secondary" disabled>Update</button>
-        <button id="btnAddCentre" class="btn-outline" disabled title="Add a new centre (max k=4)">+ Add (k&le;4)</button>
-        <button id="btnRemoveCentre" class="btn-outline" disabled title="Remove selected centre (min k=2)">&minus; Remove</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Active Cluster Panel Cards Grid -->
-  <section class="panels-section">
-    <h2 class="section-title">Cluster Panels &amp; Assigned Members</h2>
-    <div class="panel-cards" id="panelCards">
-      <em style="color:#94a3b8;font-size:13px">Load Demo to begin.</em>
+      <!-- Legend Footnote -->
+      <footer class="legend-footer" id="legend">
+        <span style="color:#38bdf8">&#9679; Circle = NEBULA (N)</span>
+        <span style="color:#c084fc">&#9651; Triangle = COMET (C)</span>
+        <span style="color:#fb923c">&#9632; Square = EMBER (E)</span>
+        <span>&#9674; grey diamond = unassigned</span>
+        <span>&#10005; hollow cross = decision centre</span>
+        <span>&#9733; glowing star = updated centroid</span>
+        <span>&rarr; dashed line = centroid drift</span>
+      </footer>
     </div>
   </section>
 
-  <!-- Legend & Accessibility Footnote -->
-  <footer class="legend-footer" id="legend">
-    <span style="color:#38bdf8">&#9679; Circle = NEBULA (N)</span>
-    <span style="color:#c084fc">&#9651; Triangle = COMET (C)</span>
-    <span style="color:#fb923c">&#9632; Square = EMBER (E)</span>
-    <span>&#9674; grey diamond = unassigned</span>
-    <span>&#10005; hollow cross = decision centre</span>
-    <span>&#9733; glowing star = updated centroid</span>
-    <span>&rarr; dashed line = centroid drift</span>
-  </footer>
+  <!-- Right Side: Sidebar Explanation (35%) -->
+  <aside class="sidebar-pane">
+    <!-- Live Metrics Card -->
+    <div class="metric-card">
+      <div class="metric-grid">
+        <div class="metric-item">
+          <span class="metric-lbl">Iteration</span>
+          <strong id="elIter" class="metric-val">0</strong>
+          <span class="metric-sub">/ 20 cap</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-lbl">Status</span>
+          <span id="elStatus" class="status-pill sp-ready">READY</span>
+          <span id="elKBadge" class="metric-sub">k = 3</span>
+        </div>
+        <div class="metric-item metric-item-wide">
+          <span class="metric-lbl">Total SSE (Sum of Squared Errors)</span>
+          <div class="metric-sse-wrap">
+            <strong id="elSSE" class="metric-val">&mdash;</strong>
+            <span id="elSSETrend" class="sse-trend"></span>
+          </div>
+          <span class="metric-sub">Convergence: signature stability (not SSE threshold)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Event Card -->
+    <div class="event-card" id="eventCard">
+      <div class="event-header">
+        <span class="event-icon">&#128269;</span>
+        <strong id="eventTitle" class="event-title">Baseline Initialized</strong>
+      </div>
+      <div id="eventDetail" class="event-detail">
+        Cosmic Cafe dataset loaded. Step or Run to begin K-Means clustering.
+      </div>
+    </div>
+
+    <!-- 4-Stage Flow Card -->
+    <div class="stage-card" id="stageBox">
+      <div class="stage-flow-nav">
+        <span class="stage-step" id="stAssign"><span class="sn">1</span> Assign</span>
+        <span class="stage-arr">&rarr;</span>
+        <span class="stage-step" id="stUpdate"><span class="sn">2</span> Update</span>
+        <span class="stage-arr">&rarr;</span>
+        <span class="stage-step" id="stMeasure"><span class="sn">3</span> Measure</span>
+        <span class="stage-arr">&rarr;</span>
+        <span class="stage-step" id="stCheck"><span class="sn">4</span> Check</span>
+      </div>
+      <div class="stage-desc" id="stageDesc">
+        <em>Ready to start. Next Step will execute Stage 1 (Assign) against initial decision centres.</em>
+      </div>
+    </div>
+
+    <!-- Sticker Inspector Card -->
+    <div class="inspector-card">
+      <h3 class="inspector-title">&#127919; Sticker Inspector</h3>
+      <div id="inspection" class="inspector-body">
+        <em>Click any sticker on the canvas to inspect squared distances (d&sup2;) and tie-break reasoning.</em>
+      </div>
+    </div>
+  </aside>
 </main>
 
 <!-- Add Sticker Modal -->
@@ -267,4 +250,5 @@
 
 </body>
 </html>
+
 
