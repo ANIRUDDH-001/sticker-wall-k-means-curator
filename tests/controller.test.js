@@ -778,7 +778,103 @@ describe('controller - formal QA & acceptance audit (Phase 5)', function() {
     expect(JSON.stringify(c.currentStickers)).toBe(JSON.stringify(c.originalStickers));
     expect(JSON.stringify(c.currentCentres)).toBe(JSON.stringify(c.originalCentres));
   });
+
+  test('QA-6: Invalid centre edit after completed run clears stale state without mutating baseline', function() {
+    var c = createController(COSMIC_CAFE);
+    c.runToEnd();
+    expect(c.iteration).toBe(3);
+    expect(c.status).toBe('CONVERGED');
+
+    var badRes = c.editCentre('NEBULA', -5, 12);
+    expect(badRes.ok).toBe(false);
+    expect(badRes.errors.length).toBeGreaterThan(0);
+    expect(c.status).toBe('READY');
+    expect(c.iteration).toBe(0);
+    expect(c.history).toEqual([]);
+    expect(c.baselineCentres.find(function(ct) { return ct.id === 'NEBULA'; }).warmth).toBe(2);
+    expect(c.baselineCentres.find(function(ct) { return ct.id === 'NEBULA'; }).sparkle).toBe(2);
+  });
+
+  test('QA-7: Invalid add/remove centre after completed run clears stale state', function() {
+    var c = createController(COSMIC_CAFE);
+    c.runToEnd();
+    expect(c.status).toBe('CONVERGED');
+
+    // Invalid add: duplicate ID
+    var resDup = c.addCentre('NEBULA', 5, 5);
+    expect(resDup.ok).toBe(false);
+    expect(c.status).toBe('READY');
+    expect(c.iteration).toBe(0);
+    expect(c.history).toEqual([]);
+
+    // Run again to convergence
+    c.runToEnd();
+    expect(c.status).toBe('CONVERGED');
+
+    // Invalid remove: non-existent ID
+    var resNotFound = c.removeCentre('NON_EXISTENT');
+    expect(resNotFound.ok).toBe(false);
+    expect(c.status).toBe('READY');
+    expect(c.iteration).toBe(0);
+    expect(c.history).toEqual([]);
+  });
+
+  test('QA-8: Strict data isolation — original demo data is never mutated by any edit/run/reset', function() {
+    var c = createController(COSMIC_CAFE);
+    var origStickersSnap = JSON.stringify(c.originalStickers);
+    var origCentresSnap = JSON.stringify(c.originalCentres);
+
+    // Edit sticker
+    c.editSticker('GALAXY', 0.5, 0.5);
+    expect(JSON.stringify(c.originalStickers)).toBe(origStickersSnap);
+
+    // Edit centre
+    c.editCentre('COMET', 4.5, 8.5);
+    expect(JSON.stringify(c.originalCentres)).toBe(origCentresSnap);
+
+    // Add centre
+    c.addCentre('PULSAR', 5, 5);
+    expect(JSON.stringify(c.originalCentres)).toBe(origCentresSnap);
+
+    // Run
+    c.runToEnd();
+    expect(JSON.stringify(c.originalStickers)).toBe(origStickersSnap);
+    expect(JSON.stringify(c.originalCentres)).toBe(origCentresSnap);
+
+    // Reset restores exact original
+    c.reset();
+    expect(JSON.stringify(c.currentStickers)).toBe(origStickersSnap);
+    expect(JSON.stringify(c.currentCentres)).toBe(origCentresSnap);
+  });
+
+  test('QA-9: 20-iteration guard terminates with NOT_CONVERGED if assignments oscillate', function() {
+    // Construct oscillating collection
+    var oscCollection = {
+      k: 2,
+      stickers: [
+        { id: 'S1', warmth: 1, sparkle: 1 },
+        { id: 'S2', warmth: 9, sparkle: 9 }
+      ],
+      centres: [
+        { id: 'C1', warmth: 1, sparkle: 1 },
+        { id: 'C2', warmth: 9, sparkle: 9 }
+      ]
+    };
+    var c = createController(oscCollection);
+
+    // Force iteration to reach 20
+    c.step();
+    // Simulate step loop with forced non-convergence
+    var spy = jest.spyOn(engine, 'isConverged').mockReturnValue(false);
+
+    c.runToEnd();
+    expect(c.iteration).toBe(20);
+    expect(c.status).toBe('NOT_CONVERGED');
+
+    spy.mockRestore();
+  });
 });
+
 
 
 

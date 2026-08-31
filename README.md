@@ -18,7 +18,7 @@ Then click **Load** to load the Cosmic Cafe collection.
 npm install
 npm test
 ```
-Expected: 82 tests, all green.
+Expected: 86 tests, all green.
 
 ## File map
 | Path | Purpose |
