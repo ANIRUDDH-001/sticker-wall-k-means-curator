@@ -9,13 +9,13 @@
 </head>
 <body class="cosmic-theme observatory-layout">
 
-<!-- Header Bar -->
+<!-- Header Bar: Title + Scenario + Run Controls -->
 <header class="app-header">
   <div class="header-brand">
     <div class="brand-icon">&#10024;</div>
     <div class="brand-text">
       <h1 class="brand-title">Cosmic Cafe Observatory</h1>
-      <span class="brand-subtitle">Sticker Wall K-Means Curator &middot; Candidate CC63 &middot; SPR26_D2_P02</span>
+      <span class="brand-subtitle">Sticker Wall K-Means Curator &middot; CC63 &middot; SPR26_D2_P02</span>
     </div>
   </div>
 
@@ -55,9 +55,9 @@
 <!-- Error / Validation Banner -->
 <div id="banner" class="banner hidden" role="alert" aria-live="assertive"></div>
 
-<!-- Main Split Workspace (Map on Left ~65%, Telemetry/Inspector on Right ~35%) -->
+<!-- Main Split Workspace (Large Map ~68%, Right Explanation Panel ~32%) -->
 <main class="app-workspace">
-  <!-- Map Pane (Hero) -->
+  <!-- Map Pane (Visual Hero) -->
   <section class="map-pane">
     <div class="map-card">
       <div class="map-header">
@@ -65,7 +65,7 @@
           <h2 class="section-title">2D Clustering Map</h2>
           <span class="axis-guide">(Warmth &times; Sparkle, 0&ndash;10)</span>
         </div>
-        <div class="canvas-hint">Direct drag enabled for stickers (&#9679;/&#9651;/&#9632;/&#9670;) and centroids (&#9733;). <span class="canvas-hint-note">Sticker positions remain fixed during K-Means. Assignments change. Centroids move.</span></div>
+        <div class="canvas-hint">Drag stickers (&#9679;/&#9651;/&#9632;/&#9670;) or centroids (&#9733;). <span class="canvas-hint-note">Sticker positions stay fixed during K-Means. Assignments change. Centroids move.</span></div>
       </div>
       <div class="canvas-container">
         <canvas id="mainCanvas" width="560" height="560" aria-label="Interactive 2D K-Means plot"></canvas>
@@ -73,9 +73,9 @@
     </div>
   </section>
 
-  <!-- Right Telemetry & Explanation Pane -->
+  <!-- Right Panel: Telemetry, Event, Pipeline, Inspector, Clusters -->
   <aside class="sidebar-pane">
-    <!-- Telemetry Card (Iteration, Status, SSE with Delta, k) -->
+    <!-- 1 & 2: Iteration, Status & SSE -->
     <div class="telemetry-card">
       <div class="metric-grid">
         <div class="metric-item">
@@ -103,7 +103,7 @@
       </div>
     </div>
 
-    <!-- Key Event Story Card -->
+    <!-- 3: Current Key Event -->
     <div class="event-card" id="eventCard">
       <div class="event-header">
         <span class="event-icon">&#128269;</span>
@@ -114,7 +114,7 @@
       </div>
     </div>
 
-    <!-- 4-Stage Connected Pipeline Stepper -->
+    <!-- 4: Four-Stage K-Means Pipeline -->
     <div class="stage-card" id="stageBox">
       <div class="stage-flow-stepper">
         <div class="stage-step" id="stAssign"><span class="sn">1</span> Assign</div>
@@ -130,73 +130,71 @@
       </div>
     </div>
 
-    <!-- Structured Distance Inspector Matrix -->
+    <!-- 5: Sticker Inspector Matrix -->
     <div class="inspector-card">
       <h3 class="inspector-title">&#127919; Sticker Inspector</h3>
       <div id="inspection" class="inspector-body">
-        <div class="inspector-placeholder">Click any sticker on the canvas to inspect squared distances (d&sup2;) to decision centres and tie-break reasoning.</div>
+        <div class="inspector-placeholder">Click any sticker on the map to inspect squared distances (d&sup2;) and tie-break reasoning.</div>
+      </div>
+    </div>
+
+    <!-- 6: Compact Cluster Summary -->
+    <div class="clusters-card">
+      <h3 class="inspector-title">&#128202; Cluster Summary</h3>
+      <div class="rail-clusters" id="panelCards">
+        <em style="color:#94a3b8;font-size:11px">Load Demo to begin.</em>
       </div>
     </div>
   </aside>
 </main>
 
-<!-- Bottom Utility Rail (Timeline + Cluster Summary + Unified Data Editor + Legend) -->
+<!-- Compact Bottom Utility Rail (Timeline | Edit / Data | Legend) -->
 <footer class="bottom-rail">
-  <!-- Timeline Row -->
+  <!-- Left: Timeline Replay -->
   <div class="rail-timeline" id="timelineBox" aria-label="Algorithm Timeline">
-    <div class="timeline-meta">
-      <strong class="timeline-title">&#128337; Timeline:</strong>
-      <span id="timelineNotice" class="timeline-notice"></span>
-    </div>
+    <strong class="timeline-title">&#128337; Timeline:</strong>
+    <span id="timelineNotice" class="timeline-notice"></span>
     <div class="timeline-pills" id="timelinePills" role="tablist">
       <button class="tp-pill active" role="tab" aria-selected="true">Iter 0 (Initial)</button>
     </div>
   </div>
 
-  <!-- Content Row: Cluster Summary + Unified Edit Strip -->
-  <div class="rail-content">
-    <!-- Cluster Summary Pills -->
-    <div class="rail-clusters" id="panelCards">
-      <em style="color:#94a3b8;font-size:11.5px">Load Demo to begin.</em>
+  <div class="rail-divider-v"></div>
+
+  <!-- Center: Compact Contextual Edit / Data Strip -->
+  <div class="rail-editor">
+    <div class="editor-subgroup" id="stickerEditorCard">
+      <span class="rail-badge">&#9998; Sticker:</span>
+      <select id="selSticker"><option value="">— load —</option></select>
+      <label class="rail-field"><span>W:</span><input type="number" id="inpW" min="0" max="10" step="0.1" disabled></label>
+      <label class="rail-field"><span>S:</span><input type="number" id="inpS" min="0" max="10" step="0.1" disabled></label>
+      <button id="btnApply" class="btn-compact" disabled>Apply</button>
+      <button id="btnAddSticker" class="btn-compact-outline" disabled title="Add custom sticker">+ Add</button>
+      <button id="btnRemoveSticker" class="btn-compact-outline" disabled title="Remove selected sticker">&minus; Del</button>
     </div>
 
-    <!-- Unified Data Editor Strip -->
-    <div class="rail-editor">
-      <!-- Sticker Editor Controls -->
-      <div class="editor-subgroup" id="stickerEditorCard">
-        <span class="rail-badge">&#9998; Sticker:</span>
-        <select id="selSticker"><option value="">— load demo —</option></select>
-        <label class="rail-field"><span>W:</span><input type="number" id="inpW" min="0" max="10" step="0.1" disabled></label>
-        <label class="rail-field"><span>S:</span><input type="number" id="inpS" min="0" max="10" step="0.1" disabled></label>
-        <button id="btnApply" class="btn-compact" disabled>Apply</button>
-        <button id="btnAddSticker" class="btn-compact-outline" disabled title="Add custom sticker">+ Add</button>
-        <button id="btnRemoveSticker" class="btn-compact-outline" disabled title="Remove selected sticker">&minus; Del</button>
-      </div>
+    <div class="rail-divider-sub"></div>
 
-      <div class="rail-divider"></div>
-
-      <!-- Centroid Editor Controls -->
-      <div class="editor-subgroup" id="centreEditorCard">
-        <span class="rail-badge">&#128205; Centroid:</span>
-        <select id="selCentre"><option value="">— load demo —</option></select>
-        <label class="rail-field"><span>W:</span><input type="number" id="inpCW" min="0" max="10" step="0.1" disabled></label>
-        <label class="rail-field"><span>S:</span><input type="number" id="inpCS" min="0" max="10" step="0.1" disabled></label>
-        <button id="btnApplyCentre" class="btn-compact" disabled>Update</button>
-        <button id="btnAddCentre" class="btn-compact-outline" disabled title="Add centroid (max k=4)">+ Add</button>
-        <button id="btnRemoveCentre" class="btn-compact-outline" disabled title="Remove centroid (min k=2)">&minus; Del</button>
-      </div>
+    <div class="editor-subgroup" id="centreEditorCard">
+      <span class="rail-badge">&#128205; Centroid:</span>
+      <select id="selCentre"><option value="">— load —</option></select>
+      <label class="rail-field"><span>W:</span><input type="number" id="inpCW" min="0" max="10" step="0.1" disabled></label>
+      <label class="rail-field"><span>S:</span><input type="number" id="inpCS" min="0" max="10" step="0.1" disabled></label>
+      <button id="btnApplyCentre" class="btn-compact" disabled>Update</button>
+      <button id="btnAddCentre" class="btn-compact-outline" disabled title="Add centroid (max k=4)">+ Add</button>
+      <button id="btnRemoveCentre" class="btn-compact-outline" disabled title="Remove centroid (min k=2)">&minus; Del</button>
     </div>
   </div>
 
-  <!-- Legend Row -->
+  <div class="rail-divider-v"></div>
+
+  <!-- Right: Compact Legend -->
   <div class="legend-footer" id="legend">
-    <span style="color:#38bdf8">&#9679; Circle = NEBULA (N)</span>
-    <span style="color:#c084fc">&#9651; Triangle = COMET (C)</span>
-    <span style="color:#fb923c">&#9632; Square = EMBER (E)</span>
-    <span>&#9674; grey diamond = unassigned</span>
-    <span>&#10005; hollow cross = decision centre</span>
-    <span>&#9733; glowing star = updated centroid</span>
-    <span>&rarr; dashed line = centroid drift</span>
+    <span style="color:#38bdf8">&#9679; NEBULA (N)</span>
+    <span style="color:#c084fc">&#9651; COMET (C)</span>
+    <span style="color:#fb923c">&#9632; EMBER (E)</span>
+    <span>&#10005; decision</span>
+    <span>&#9733; updated</span>
   </div>
 </footer>
 

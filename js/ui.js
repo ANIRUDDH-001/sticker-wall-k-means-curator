@@ -646,22 +646,20 @@
   }
 
   /* =========================================================================
-   * Dynamic Legend
+   * Dynamic Legend (Compact)
    * ========================================================================= */
   function renderLegend(centres) {
     if (!elLegend) return;
-    var shapeSymbols = { circle: '&#9679; Circle', triangle: '&#9651; Triangle', square: '&#9632; Square', diamond: '&#9670; Diamond' };
+    var shapeSymbols = { circle: '&#9679;', triangle: '&#9651;', square: '&#9632;', diamond: '&#9670;' };
     var html = '';
     centres.forEach(function (c, i) {
       var cfg = PANEL_CFG[i] || { colour: '#6b7280', shape: 'circle', letter: c.id.charAt(0) };
-      var sym = shapeSymbols[cfg.shape] || '&#9679; Symbol';
+      var sym = shapeSymbols[cfg.shape] || '&#9679;';
       var ltr = cfg.letter || c.id.charAt(0);
-      html += '<span style=\"color:' + cfg.colour + '\">' + sym + ' = ' + c.id + ' (' + ltr + ')</span> ';
+      html += '<span style=\"color:' + cfg.colour + '\">' + sym + ' ' + c.id + ' (' + ltr + ')</span> ';
     });
-    html += '<span>&#9674; grey diamond = unassigned</span> ';
-    html += '<span>&#10005; hollow cross = decision centre</span> ';
-    html += '<span>&#9733; glowing star = updated centroid</span> ';
-    html += '<span>&rarr; dashed line = centroid drift</span>';
+    html += '<span>&#10005; decision</span> ';
+    html += '<span>&#9733; updated</span>';
     elLegend.innerHTML = html;
   }
 
