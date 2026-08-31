@@ -972,6 +972,74 @@ describe('controller - interactive sticker & centroid management (Phase 2)', fun
   });
 });
 
+// ---------------------------------------------------------------------------
+// Phase 3: Visualization Semantics & Truthfulness Regression Suite
+// ---------------------------------------------------------------------------
+describe('controller - visualization truthfulness & coordinate invariance (Phase 3)', function() {
+  test('P3-V1: Sticker coordinates remain strictly identical across all iterations', function() {
+    var c = createController(COSMIC_CAFE);
+    c.runToEnd();
+
+    expect(c.history.length).toBe(3);
+    var initialCoords = JSON.stringify(c.originalStickers);
+
+    c.history.forEach(function(snap) {
+      expect(JSON.stringify(snap.stickers)).toBe(initialCoords);
+    });
+    expect(JSON.stringify(c.currentStickers)).toBe(initialCoords);
+  });
+
+  test('P3-V2: Decision centres are distinct from updated centres in Iterations 1 & 2', function() {
+    var c = createController(COSMIC_CAFE);
+    c.runToEnd();
+
+    var snap1 = c.history[0];
+    var snap2 = c.history[1];
+
+    // Iteration 1: Decision centres = baseline centres (2,2), (2,8), (8,5)
+    // Updated centres = (1.625, 2.125), (2, 8), (6.5, 3.833)
+    expect(JSON.stringify(snap1.decisionCentres)).not.toBe(JSON.stringify(snap1.updatedCentres));
+
+    // Iteration 2: Decision centres = Iteration 1 updated centres
+    // Updated centres = (1.667, 2), (2, 8), (6.125, 3.75)
+    expect(JSON.stringify(snap2.decisionCentres)).not.toBe(JSON.stringify(snap2.updatedCentres));
+  });
+
+  test('P3-V3: Converged iteration has zero centroid movement for all clusters', function() {
+    var c = createController(COSMIC_CAFE);
+    c.runToEnd();
+
+    var snap3 = c.history[2]; // Iteration 3 (Converged)
+    expect(snap3.status).toBe('CONVERGED');
+    Object.keys(snap3.movements).forEach(function(centreId) {
+      expect(snap3.movements[centreId]).toBe(0);
+    });
+    // In converged iteration, decisionCentres and updatedCentres coordinates are identical
+    expect(JSON.stringify(snap3.decisionCentres)).toBe(JSON.stringify(snap3.updatedCentres));
+  });
+
+  test('P3-V4: SUNRISE cluster reassignment (NEBULA -> EMBER) preserves exact coordinates (5, 3.5)', function() {
+    var c = createController(COSMIC_CAFE);
+    c.runToEnd();
+
+    var snap1 = c.history[0];
+    var snap2 = c.history[1];
+
+    var s1 = snap1.stickers.find(function(s) { return s.id === 'SUNRISE'; });
+    var s2 = snap2.stickers.find(function(s) { return s.id === 'SUNRISE'; });
+
+    expect(s1.warmth).toBe(5);
+    expect(s1.sparkle).toBe(3.5);
+    expect(s2.warmth).toBe(5);
+    expect(s2.sparkle).toBe(3.5);
+
+    var sunriseIdx = snap1.stickers.findIndex(function(s) { return s.id === 'SUNRISE'; });
+    expect(snap1.assignments[sunriseIdx]).toBe('NEBULA');
+    expect(snap2.assignments[sunriseIdx]).toBe('EMBER');
+  });
+});
+
+
 
 
 

@@ -227,50 +227,67 @@
       });
     }
 
-    // 2. Centroid drift vectors: DECISION CENTRES -> UPDATED CENTRES
-    if (snap) {
-      decisionCentres.forEach(function (dc, i) {
-        var uc = updatedCentres.find(function (x) { return x.id === dc.id; });
-        if (uc) {
-          var cfg = PANEL_CFG[i] || { colour: '#6b7280' };
-          drawDriftArrow(toX(dc.warmth), toY(dc.sparkle), toX(uc.warmth), toY(uc.sparkle), cfg.colour);
-        }
-      });
-    }
-
-    // 3. Decision centres (hollow X with ID labels)
+    // 2. Centroid drift vectors & distinct vs stable markers
     centreHits = [];
-    decisionCentres.forEach(function (c, i) {
-      var x = toX(c.warmth), y = toY(c.sparkle);
-      centreHits.push({ id: c.id, screenX: x, screenY: y, idx: i, warmth: c.warmth, sparkle: c.sparkle });
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth   = 2.2;
-      drawX(x, y, 8);
 
-      ctx.fillStyle  = '#cbd5e1';
-      ctx.font       = '10px sans-serif';
-      ctx.textAlign  = 'left';
-      var label = (snap ? 'Pre: ' : '') + c.id + ' (' + fmt(c.warmth) + ',' + fmt(c.sparkle) + ')';
-      ctx.fillText(label, x + 10, y - 7);
-    });
+    decisionCentres.forEach(function (dc, i) {
+      var uc = updatedCentres.find(function (x) { return x.id === dc.id; });
+      var cfg = PANEL_CFG[i] || { colour: '#6b7280' };
 
-    // 4. Updated centres (large glowing star)
-    if (snap || ctrl.iteration > 0) {
-      updatedCentres.forEach(function (c, i) {
-        var cfg = PANEL_CFG[i] || { colour: '#6b7280' };
-        var x   = toX(c.warmth), y = toY(c.sparkle);
+      var dcX = toX(dc.warmth), dcY = toY(dc.sparkle);
+      var ucX = uc ? toX(uc.warmth) : dcX, ucY = uc ? toY(uc.sparkle) : dcY;
+      var distPx = Math.sqrt((ucX - dcX) * (ucX - dcX) + (ucY - dcY) * (ucY - dcY));
 
-        // Outer glow
+      // Record hit target at updated centre (or decision centre if pre-run)
+      centreHits.push({ id: dc.id, screenX: ucX, screenY: ucY, idx: i, warmth: uc ? uc.warmth : dc.warmth, sparkle: uc ? uc.sparkle : dc.sparkle });
+
+      if (snap && distPx >= 1.5) {
+        // DRIFTING CENTROID: Draw pre-update cross (X), drift arrow, and post-update star
+        drawDriftArrow(dcX, dcY, ucX, ucY, cfg.colour);
+
+        // Pre-update decision centre (hollow X)
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth   = 2.0;
+        drawX(dcX, dcY, 7);
+
+        ctx.fillStyle  = '#94a3b8';
+        ctx.font       = '10px sans-serif';
+        ctx.textAlign  = 'left';
+        ctx.fillText('Pre: ' + dc.id + ' (' + fmt(dc.warmth) + ',' + fmt(dc.sparkle) + ')', dcX + 9, dcY - 6);
+
+        // Post-update centroid (glowing star)
         ctx.save();
         ctx.shadowColor = cfg.colour;
-        ctx.shadowBlur = 12;
-        ctx.fillStyle  = cfg.colour;
-        ctx.font       = 'bold 20px serif';
-        ctx.textAlign  = 'center';
-        ctx.fillText('\u2605', x, y + 7);
+        ctx.shadowBlur  = 12;
+        ctx.fillStyle   = cfg.colour;
+        ctx.font        = 'bold 20px serif';
+        ctx.textAlign   = 'center';
+        ctx.fillText('\u2605', ucX, ucY + 7);
         ctx.restore();
-      });
-    }
+
+        ctx.fillStyle  = '#f1f5f9';
+        ctx.font       = 'bold 10px sans-serif';
+        ctx.textAlign  = 'left';
+        ctx.fillText(uc.id + ' (' + fmt(uc.warmth) + ',' + fmt(uc.sparkle) + ')', ucX + 11, ucY + 4);
+      } else {
+        // STABLE / IDENTICAL CENTROID: Draw unified stable star marker (no double-drawing or drift shift)
+        ctx.save();
+        ctx.shadowColor = cfg.colour;
+        ctx.shadowBlur  = 12;
+        ctx.fillStyle   = cfg.colour;
+        ctx.font        = 'bold 20px serif';
+        ctx.textAlign   = 'center';
+        ctx.fillText('\u2605', ucX, ucY + 7);
+        ctx.restore();
+
+        ctx.fillStyle  = '#cbd5e1';
+        ctx.font       = '10px sans-serif';
+        ctx.textAlign  = 'left';
+        var isConvOrStable = (snap && snap.status === 'CONVERGED') || (snap && distPx < 1.5);
+        var label = dc.id + (isConvOrStable ? ' (stable)' : '') + ' (' + fmt(dc.warmth) + ',' + fmt(dc.sparkle) + ')';
+        ctx.fillText(label, ucX + 11, ucY + 4);
+      }
+    });
 
     // 5. Stickers with smart collision offset
     stickerHits = [];
@@ -644,18 +661,27 @@
         '<b>' + assignedId + '</b> assigned because ' + assignedId + ' is earlier in centre source order.</div>';
     }
 
+    var reassignmentHtml = '';
+    if (viewedIteration > 1 && ctrl.history.length >= viewedIteration) {
+      var prevSnap = ctrl.history[viewedIteration - 2];
+      if (prevSnap && prevSnap.assignments[idx] && prevSnap.assignments[idx] !== assignedId) {
+        reassignmentHtml = ' <span style=\"color:#f97316;font-size:11.5px;font-weight:600;\">(\u2190 reassigned from ' + prevSnap.assignments[idx] + ')</span>';
+      }
+    }
+
     var headerNote = (viewedIteration > 0)
-      ? 'Assignment distances &mdash; centres before update (Iteration ' + viewedIteration + '):'
-      : 'Initial distances &mdash; baseline centres:';
+      ? 'Distances to decision centres (pre-update, Iteration ' + viewedIteration + '):'
+      : 'Initial distances to baseline centres:';
 
     elInspect.innerHTML =
       '<div><strong style=\"color:#f8fafc;font-size:14px;\">' + s.id + '</strong> (' + fmt(s.warmth) + ', ' + fmt(s.sparkle) + ')</div>' +
       '<div style=\"font-size:12px;color:#94a3b8;margin-top:2px;\">' + headerNote + '</div>' +
       '<div class=\"dist-row\">d\u00B2 \u2192 ' + distHtml + '</div>' +
       (assignedId
-        ? '<div style=\"margin-top:4px;\">Assigned to: <b style=\"color:#38bdf8;\">' + assignedId + '</b></div>'
+        ? '<div style=\"margin-top:4px;\">Assigned to: <b style=\"color:#38bdf8;\">' + assignedId + '</b>' + reassignmentHtml + '</div>'
         : '<div style=\"margin-top:4px;\">Not yet assigned (iteration 0).</div>') +
-      tieHtml;
+      tieHtml +
+      '<div style=\"font-size:11px;color:#64748b;margin-top:6px;\">* Sticker coordinates remain fixed during K-Means iterations.</div>';
 
     render();
   }
